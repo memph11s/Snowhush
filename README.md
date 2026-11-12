@@ -2,7 +2,19 @@
   <a href="https://snowhush.app"><img src="site/assets/icon-512.png" width="128" height="128" alt="Snowhush icon"></a>
 </p>
 
-<h1 align="center">Snowhush</h1>
+<h1 align="center">Snowhush — Nikita Edition</h1>
+
+<p align="center">Персональный форк <a href="https://github.com/mbezruchko/Snowhush">Snowhush</a> с более спокойным снегопадом по умолчанию.</p>
+
+## Что изменено в этой версии
+
+- Видимое название приложения — **Snowhush — Nikita Edition**.
+- Стандартная интенсивность снегопада снижена с 50% до 35%, чтобы снег меньше отвлекал от работы.
+- Оригинальная физика, режимы погоды и настройки сохранены.
+
+Исходный проект разработан [Mykhailo Bezruchko](https://github.com/mbezruchko). Этот репозиторий содержит персональные изменения поверх авторской версии, а не независимую реализацию. Ниже сохранена оригинальная документация; ссылки на готовые релизы ведут к версии автора.
+
+---
 
 <p align="center">It's snowing on your desktop.</p>
 

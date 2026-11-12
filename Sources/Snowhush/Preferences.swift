@@ -43,7 +43,7 @@ enum Preferences {
     static func registerDefaults() {
         let calm = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         defaults.register(defaults: [
-            intensityKey: calm ? 0.25 : 0.5,
+            intensityKey: calm ? 0.25 : 0.35,
             behindWindowsKey: false,
             showOverFullScreenKey: false,
             meltSnowKey: true,
