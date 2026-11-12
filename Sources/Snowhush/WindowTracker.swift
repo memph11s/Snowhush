@@ -120,6 +120,7 @@ final class WindowTracker {
     /// The largest window at the last poll, checked every frame until the next: a Space that starts sliding carries
     /// it off well before the next poll would see. A floating panel might stay on every Space; a window that big won't.
     private var watched: (id: CGWindowID, frame: CGRect)?
+    private var watchedCheckedAt: CFTimeInterval = 0
     /// Every app window on the screen at the last poll, by id, those that carry no snow too: a Space slides them all.
     private var windowFrames: [CGWindowID: CGRect] = [:]
     /// A Space sliding on by itself after a swipe, for the snow to keep up with what the window list reports late.
@@ -175,7 +176,7 @@ final class WindowTracker {
         // A sliding Space is followed every frame, its snow riding on the windows with no smoothing.
         // Turned to hide by itself, a Dock that stayed out slides away at once: the slow polls would let its snow hang.
         let dockTurnedToHide = dockStays && Dock.autoHides
-        guard minimizing || bannerMoving || now < slidingUntil || interval >= (closely ? 1.0 / 62 : 0.2) || dockTurnedToHide || watchedMoved() else { return nil }
+        guard minimizing || bannerMoving || now < slidingUntil || interval >= (closely ? 1.0 / 62 : 0.2) || dockTurnedToHide || watchedMoved(now: now) else { return nil }
         lastQuery = now
         let before = windowFrames
         let surfaces = query(now: now)
@@ -331,7 +332,10 @@ final class WindowTracker {
 
     /// Whether the watched window left the place the last poll found it, by a look at it alone: a fraction of the
     /// cost of the whole window list, and like the list, it follows the window as its Space slides.
-    private func watchedMoved() -> Bool {
+    private func watchedMoved(now: CFTimeInterval) -> Bool {
+        // Asking the window server costs it and us a round trip; 40 looks a second still catch a Space starting to slide.
+        guard now - watchedCheckedAt >= 1.0 / 40 else { return false }
+        watchedCheckedAt = now
         guard let watched, let bounds = Self.listedBounds(of: watched.id) else { return false }
         return abs(bounds.minX - screen.minX - watched.frame.minX) > 0.5 || abs(screen.maxY - bounds.maxY - watched.frame.minY) > 0.5
     }

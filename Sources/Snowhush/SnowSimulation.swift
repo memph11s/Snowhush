@@ -693,6 +693,7 @@ final class SnowSimulation {
         didSet {
             guard icicles != oldValue else { return }
             icicleGrowth = 0
+            icicleCache.removeAll()
             drips.removeAll()
             decorChanged = true
             stirred()
@@ -710,6 +711,10 @@ final class SnowSimulation {
     private var blinkTick = -1
     /// From nothing to full length, over the first minute the icicles are on.
     private var icicleGrowth: Float = 0
+    /// The icicles as of the last step, worked out once a step for both the drops and the drawing.
+    private var icicleCache: [(x: Float, top: Float, width: Float, length: Float)] = []
+    /// The garland drawn at the last blink, kept until the next one or until the screen changes.
+    private var garlandCache: (key: SIMD3<Float>, sprites: [DecorSprite])?
     private var drips: [(position: SIMD2<Float>, speed: Float)] = []
     private var nextDrip: Double = 0
 
@@ -797,8 +802,9 @@ final class SnowSimulation {
         }
         // Only a cursor that actually displaces snow needs the full rate; one passing near it or resting in it changes nothing.
         let pushed = clock - lastWindowMotion < 0.6 || clock - lastCursorPush < 0.3 || gust != nil || !snowballs.isEmpty || clock - hitAt < 0.6
+        // A storm's flakes read fine at the calm rate too; only its strongest gusts need more.
         // The steady trickle off window corners is a few tiny grains at a time; they read fine at the calm rate.
-        let flying = grains.count > 24 || clock < scatteredUntil || abs(slideWind) > 20 || abs(stormWind) > 20 && !flakes.isEmpty
+        let flying = grains.count > 24 || clock < scatteredUntil || abs(slideWind) > 20 || abs(stormWind) > 110 && !flakes.isEmpty
         if pushed {
             pace = .interactive
         } else if flying {
@@ -1110,7 +1116,8 @@ final class SnowSimulation {
             icicleGrowth = min(1, icicleGrowth + dt / 45)
             decorChanged = true
         }
-        let tips = icicleList().filter { $0.length > 10 }
+        icicleCache = icicleList()
+        let tips = icicleCache.filter { $0.length > 10 }
         if clock >= nextDrip {
             nextDrip = clock + Double(random.range(0.4, 1.6))
             if !tips.isEmpty, icicleGrowth > 0.3 {
@@ -1173,7 +1180,7 @@ final class SnowSimulation {
     var hangingDecor: [DecorSprite] {
         var sprites: [DecorSprite] = []
         if icicles {
-            for icicle in icicleList() where icicle.length > 0.5 {
+            for icicle in icicleCache where icicle.length > 0.5 {
                 sprites.append(DecorSprite(picture: .icicle, anchor: SIMD2(icicle.x, icicle.top + 1), size: SIMD2(icicle.width, icicle.length + 1),
                                            pivot: SIMD2(0.5, 1)))
             }
@@ -1181,7 +1188,11 @@ final class SnowSimulation {
                 sprites.append(DecorSprite(picture: .drop, anchor: drip.position, size: SIMD2(3, 4), pivot: SIMD2(0.5, 0.5)))
             }
         }
-        if garland { sprites += garlandSprites() }
+        if garland {
+            let key = SIMD3(Float(blinkTick), width, menuBar)
+            if garlandCache?.key != key { garlandCache = (key, garlandSprites()) }
+            sprites += garlandCache?.sprites ?? []
+        }
         return sprites
     }
 
