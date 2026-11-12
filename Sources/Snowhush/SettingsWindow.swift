@@ -37,6 +37,7 @@ final class SettingsModel: ObservableObject {
     @Published var screenshots = false
     @Published var performance = false
     @Published var login = false
+    @Published var tab = 0
 
     func reload() {
         intensity = Preferences.intensity
@@ -84,7 +85,7 @@ final class SettingsWindowController: NSWindowController {
     let model = SettingsModel()
 
     init() {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 560), styleMask: [.titled, .closable, .miniaturizable],
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 600), styleMask: [.titled, .closable, .miniaturizable],
                               backing: .buffered, defer: true)
         window.title = tr("settings.window")
         window.isReleasedWhenClosed = false
@@ -99,8 +100,10 @@ final class SettingsWindowController: NSWindowController {
         model.reload()
         guard let window else { return }
         if !window.isVisible { window.center() }
-        NSApp.activate()
+        // A menu bar app isn't brought forward by a cooperative activation: the window is put in front itself.
+        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
     }
 }
 
@@ -109,16 +112,32 @@ final class SettingsWindowController: NSWindowController {
 struct SettingsView: View {
     @ObservedObject var model: SettingsModel
 
+    static let tabs: [(key: String, symbol: String)] = [
+        ("tab.snowfall", "snowflake"), ("tab.drifts", "mountain.2"), ("newyear", "gift"), ("display", "display"), ("general", "gearshape"),
+    ]
+
     var body: some View {
-        TabView {
-            SnowfallTab(model: model).tabItem { Label(tr("tab.snowfall"), systemImage: "snowflake") }
-            DriftsTab(model: model).tabItem { Label(tr("tab.drifts"), systemImage: "mountain.2") }
-            NewYearTab(model: model).tabItem { Label(tr("newyear"), systemImage: "gift") }
-            DisplayTab(model: model).tabItem { Label(tr("display"), systemImage: "display") }
-            GeneralTab(model: model).tabItem { Label(tr("general"), systemImage: "gearshape") }
+        VStack(spacing: 0) {
+            // Its own row of tabs, always in sight: the system's folds them away into the toolbar of a small window.
+            HStack(spacing: 4) {
+                ForEach(Array(Self.tabs.enumerated()), id: \.offset) { index, tab in
+                    TabButton(title: tr(tab.key), symbol: tab.symbol, selected: model.tab == index) { model.tab = index }
+                }
+            }
+            .padding(.vertical, 8)
+            Divider()
+            Group {
+                switch model.tab {
+                case 1: DriftsTab(model: model)
+                case 2: NewYearTab(model: model)
+                case 3: DisplayTab(model: model)
+                case 4: GeneralTab(model: model)
+                default: SnowfallTab(model: model)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(16)
-        .frame(width: 620, height: 560)
+        .frame(width: 620, height: 600)
     }
 }
 
@@ -515,5 +534,27 @@ enum StylePreviews {
         draw(.scarf, in: CGRect(x: 24.5, y: 37, width: 15, height: 9), into: context)
         draw(.face, in: CGRect(x: 24.5, y: 41.5, width: 15, height: 15), into: context)
         draw(.hat, in: CGRect(x: 26.5, y: 53, width: 11, height: 9), angle: -0.12, into: context)
+    }
+}
+
+/// One of the tabs along the top of the settings window: an icon over its name, tinted while chosen.
+private struct TabButton: View {
+    let title: String
+    let symbol: String
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Image(systemName: symbol).font(.system(size: 19)).frame(height: 22)
+                Text(title).font(.system(size: 11)).lineLimit(1)
+            }
+            .frame(width: 108, height: 50)
+            .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+            .background(RoundedRectangle(cornerRadius: 8).fill(selected ? Color.accentColor.opacity(0.14) : Color.clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }

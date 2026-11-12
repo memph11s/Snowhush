@@ -1235,3 +1235,28 @@ fn picks_a_language_from_system_tags() {
     assert_eq!(code("C"), None);
     assert_eq!(code("nl-NL"), None);
 }
+
+/// Mean sideways speed of what is in the air.
+fn mean_drift(simulation: &SnowSimulation) -> f32 {
+    let mut buffer = vec![Sprite::default(); simulation.sprite_count()];
+    let count = simulation.write_sprites(&mut buffer);
+    let falling: Vec<&Sprite> = buffer[..count].iter().filter(|s| s.velocity.y < -5.0).collect();
+    falling.iter().map(|s| s.velocity.x).sum::<f32>() / falling.len().max(1) as f32
+}
+
+#[test]
+fn a_storm_drives_the_snow_sideways_and_dies_down_once_off() {
+    let mut simulation = SnowSimulation::new(1200.0, 800.0, 0.6);
+    simulation.set_snowfall_held(false);
+    run(&mut simulation, 10.0, AWAY);
+    let calm = mean_drift(&simulation).abs();
+    simulation.set_storm(true);
+    run(&mut simulation, 12.0, AWAY);
+    let stormy = mean_drift(&simulation).abs();
+    assert!(stormy > calm + 25.0, "calm {calm}, storm {stormy}");
+    simulation.set_storm(false);
+    run(&mut simulation, 20.0, AWAY);
+    let after = mean_drift(&simulation).abs();
+    assert!(after < stormy * 0.5, "storm {stormy}, after {after}");
+    assert_finite(&simulation);
+}

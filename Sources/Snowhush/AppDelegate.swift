@@ -60,6 +60,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         refreshHalloween()
         halloweenTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.refreshHalloween() }
         observeSystem()
+        // `open Snowhush.app --args --settings 2` opens the settings window on its third tab.
+        let arguments = CommandLine.arguments
+        if let at = arguments.firstIndex(of: "--settings") {
+            showSettings()
+            if at + 1 < arguments.count, let tab = Int(arguments[at + 1]) { settings?.model.tab = tab }
+        }
         Marquee.enabled = Preferences.deepInteraction
         screenshots.stepAside = { [weak self] aside in self?.screens.forEach { $0.stepAside(aside) } }
         screenshots.start()
@@ -241,6 +247,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
     }
 
     private var settings: SettingsWindowController?
+
+    /// Opening the app again, from the Finder, Launchpad or Spotlight, while it already runs opens its settings.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showSettings()
+        return false
+    }
 
     @objc func showSettings() {
         if settings == nil {
