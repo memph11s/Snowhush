@@ -85,6 +85,23 @@ final class ScreenSnow {
             simulation.halloween = halloween
         }
     }
+    /// The New Year's pieces, each switched on and off from the menu.
+    var newYear: Bool {
+        get { simulation.newYear }
+        set { simulation.newYear = newValue }
+    }
+    var storm: Bool {
+        get { simulation.storm }
+        set { simulation.storm = newValue }
+    }
+    var garland: Bool {
+        get { simulation.garland }
+        set { simulation.garland = newValue }
+    }
+    var icicles: Bool {
+        get { simulation.icicles }
+        set { simulation.icicles = newValue }
+    }
     var modes: [Mode] {
         get { simulation.modes }
         set { simulation.modes = newValue }
@@ -435,6 +452,7 @@ final class ScreenSnow {
         tracker.screen = CGRect(x: frame.minX, y: primaryHeight - frame.maxY, width: frame.width, height: frame.height)
         tracker.primaryHeight = primaryHeight
         tracker.menuBarHeight = frame.maxY - screen.visibleFrame.maxY
+        simulation.menuBar = Float(max(0, frame.maxY - screen.visibleFrame.maxY))
         tracker.reset()
         let others = NSScreen.screens.map(\.frame).filter { $0 != frame && $0.maxY > frame.minY && $0.minY < frame.maxY }
         simulation.walls = (

@@ -8,6 +8,12 @@
 "rain" = "Дощ";
 "blossom" = "Цвіт сакури";
 "halloween" = "Гелловін";
+"newyear" = "Новий рік";
+"newyear.decor" = "Новорічні прикраси";
+"storm" = "Хуртовина";
+"garland" = "Гірлянда";
+"icicles" = "Бурульки";
+"newyear.sign" = "З Новим роком!";
 "settings" = "Налаштування";
 "behavior" = "Поведінка";
 "display" = "Відображення";

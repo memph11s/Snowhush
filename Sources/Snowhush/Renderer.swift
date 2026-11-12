@@ -73,6 +73,11 @@ final class Renderer: NSObject, MTKViewDelegate {
     private let pilePipeline: MTLRenderPipelineState
     private let signPipeline: MTLRenderPipelineState
     private let pumpkinPipeline: MTLRenderPipelineState
+    private let decorPipeline: MTLRenderPipelineState
+    /// The New Year's pictures, each drawn the first time it is needed.
+    private var decorPictures: [NewYear.Picture: MTLTexture] = [:]
+    private var decorBuffers: [MTLBuffer] = []
+    private var decorCapacity = 0
     /// Drops on the glass: their bumps added up into a field, and the glass drawn from it.
     private let fieldPipeline: MTLRenderPipelineState
     private let glassPipeline: MTLRenderPipelineState
@@ -120,6 +125,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         self.pilePipeline = try pipeline("pileVertex", "pileFragment")
         self.signPipeline = try pipeline("signVertex", "signFragment")
         self.pumpkinPipeline = try pipeline("pumpkinVertex", "pumpkinFragment")
+        self.decorPipeline = try pipeline("decorVertex", "decorFragment")
         self.glassPipeline = try pipeline("glassVertex", "glassFragment")
         let field = MTLRenderPipelineDescriptor()
         field.vertexFunction = library.makeFunction(name: "spriteVertex")
@@ -232,7 +238,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         if view.preferredFramesPerSecond != pace { view.preferredFramesPerSecond = pace }
         idleFrames = changed || lanternMoved ? 0 : idleFrames + 1
         // A still pile only needs a slow refresh for its glints.
-        guard changed || lanternMoved || ((simulation.hasSnow || !simulation.pumpkins.isEmpty) && idleFrames % 2 == 0) else { return }
+        guard changed || lanternMoved || ((simulation.hasSnow || !simulation.pumpkins.isEmpty || simulation.newYear) && idleFrames % 2 == 0) else { return }
 
         semaphore.wait()
         guard let pass = view.currentRenderPassDescriptor,
@@ -292,9 +298,13 @@ final class Renderer: NSObject, MTKViewDelegate {
 
         let glass = sprites > 0 && simulation.hasGlassDrops ? encodeField(sprites: spriteBuffer, count: sprites, into: commandBuffer, matching: pass, uniforms: uniforms) : nil
         if !simulation.hasGlassDrops { field = nil }
+        let standing = simulation.groundDecor, hanging = simulation.hangingDecor
+        let decor = writeDecor(standing + hanging, slot: index)
         guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return }
         drawPumpkins(pumpkins, with: encoder, uniforms: uniforms)
+        if let decor { drawDecor(standing, from: 0, in: decor, with: encoder, uniforms: uniforms) }
         drawPiles(piles.filter { !$0.isDock }, with: encoder, uniforms: uniforms, heights: heightBuffer)
+        if let decor { drawDecor(hanging, from: standing.count, in: decor, with: encoder, uniforms: uniforms) }
         drawSigns(simulation.signs, with: encoder, uniforms: uniforms)
         if sprites > 0 {
             encoder.setRenderPipelineState(spritePipeline)
@@ -434,6 +444,58 @@ final class Renderer: NSObject, MTKViewDelegate {
         commandBuffer.waitUntilCompleted()
         pumpkinPictures = (shell, face)
         return pumpkinPictures
+    }
+
+    /// Writes every decoration's uniforms into this frame's buffer, or returns nil with none to draw.
+    private func writeDecor(_ decor: [DecorSprite], slot: Int) -> MTLBuffer? {
+        guard !decor.isEmpty else { return nil }
+        if decor.count > decorCapacity || decorBuffers.count != framesInFlight {
+            decorCapacity = max(512, decor.count * 3 / 2)
+            decorBuffers = makeBuffers(length: decorCapacity * MemoryLayout<DecorUniforms>.stride)
+        }
+        guard decorBuffers.count == framesInFlight else { return nil }
+        let buffer = decorBuffers[slot]
+        let pointer = buffer.contents().bindMemory(to: DecorUniforms.self, capacity: decorCapacity)
+        for (k, sprite) in decor.enumerated() { pointer[k] = DecorUniforms(sprite) }
+        return buffer
+    }
+
+    /// Draws `decor`, written into `buffer` from `start` on, a run of the same picture at a time, in order.
+    private func drawDecor(_ decor: [DecorSprite], from start: Int, in buffer: MTLBuffer, with encoder: MTLRenderCommandEncoder, uniforms: Uniforms) {
+        guard !decor.isEmpty else { return }
+        var uniforms = uniforms
+        encoder.setRenderPipelineState(decorPipeline)
+        encoder.setVertexBytes(&uniforms, length: MemoryLayout<Uniforms>.stride, index: 1)
+        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<Uniforms>.stride, index: 1)
+        var first = 0
+        while first < decor.count {
+            let picture = decor[first].picture
+            var last = first + 1
+            while last < decor.count && decor[last].picture == picture { last += 1 }
+            if let texture = decorPicture(picture) {
+                encoder.setVertexBuffer(buffer, offset: (start + first) * MemoryLayout<DecorUniforms>.stride, index: 0)
+                encoder.setFragmentTexture(texture, index: 0)
+                encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: last - first)
+            }
+            first = last
+        }
+    }
+
+    /// Drawn large and mipmapped, like the pumpkins: the bulbs and drops are shown at a fraction of that.
+    private func decorPicture(_ picture: NewYear.Picture) -> MTLTexture? {
+        if let texture = decorPictures[picture] { return texture }
+        guard let context = NewYear.draw(picture), let data = context.data else { return nil }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm, width: context.width, height: context.height, mipmapped: true)
+        descriptor.usage = .shaderRead
+        guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }
+        texture.replace(region: MTLRegionMake2D(0, 0, context.width, context.height), mipmapLevel: 0, withBytes: data, bytesPerRow: context.bytesPerRow)
+        guard let commandBuffer = queue.makeCommandBuffer(), let blit = commandBuffer.makeBlitCommandEncoder() else { return nil }
+        blit.generateMipmaps(for: texture)
+        blit.endEncoding()
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+        decorPictures[picture] = texture
+        return texture
     }
 
     private func signPicture(_ caption: Int) -> (texture: MTLTexture, size: SIMD2<Float>)? {

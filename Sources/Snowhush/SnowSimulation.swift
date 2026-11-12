@@ -660,6 +660,56 @@ final class SnowSimulation {
     /// The app windows on the screen, left, bottom, right, top: a pumpkin hides from any that covers it.
     var windowFrames: [SIMD4<Float>] = []
 
+    /// Ornaments, gifts and a snowman with a sign sitting in the drift at the bottom of the screen.
+    var newYear = false {
+        didSet {
+            guard newYear != oldValue else { return }
+            ornamentBottoms = []
+            decorChanged = true
+            stirred()
+        }
+    }
+    /// A strong wind in gusts: the snow flies slanted, the crests are blown off and the drift heaps up downwind.
+    var storm = false {
+        didSet {
+            guard storm != oldValue else { return }
+            if storm && stormWind == 0 { stormDirection = random.next() < 0.5 ? -1 : 1 }
+            stirred()
+        }
+    }
+    /// Blinking lights hung under the menu bar.
+    var garland = false {
+        didSet {
+            guard garland != oldValue else { return }
+            decorChanged = true
+            stirred()
+        }
+    }
+    /// Icicles growing under the windows' bottom edges, now and then letting a drop fall.
+    var icicles = false {
+        didSet {
+            guard icicles != oldValue else { return }
+            icicleGrowth = 0
+            drips.removeAll()
+            decorChanged = true
+            stirred()
+        }
+    }
+    /// How tall the menu bar is: the garland hangs under it.
+    var menuBar: Float = 0 {
+        didSet { decorChanged = decorChanged || menuBar != oldValue }
+    }
+    private var stormWind: Float = 0
+    private var stormDirection: Float = 1
+    /// Where each ornament's bottom rests, easing after the drift under it.
+    private var ornamentBottoms: [Float] = []
+    private var decorChanged = false
+    private var blinkTick = -1
+    /// From nothing to full length, over the first minute the icicles are on.
+    private var icicleGrowth: Float = 0
+    private var drips: [(position: SIMD2<Float>, speed: Float)] = []
+    private var nextDrip: Double = 0
+
     init(width: Float, height: Float, intensity: Float) {
         self.width = width
         self.height = height
@@ -681,7 +731,7 @@ final class SnowSimulation {
     var hasSnow: Bool { !lying.isEmpty || layers.contains { $0.top > 0.5 } }
     /// Nothing falls, lies, waits for its window or haunts, and nothing will until the snow is stirred.
     var isEmpty: Bool {
-        intensity <= 0 && !halloween && flakes.isEmpty && grains.isEmpty && motes.isEmpty && ghosts.isEmpty
+        intensity <= 0 && !halloween && !newYear && !garland && !icicles && stormWind == 0 && flakes.isEmpty && grains.isEmpty && motes.isEmpty && ghosts.isEmpty
             && fallingSigns.isEmpty && snowballs.isEmpty && gust == nil && dormant.isEmpty && parking.isEmpty && lying.isEmpty && nextMode == nil
             && splashes.isEmpty && glassDrops.isEmpty && !wet
             && !layers.contains { $0.top > 0 }
@@ -735,6 +785,8 @@ final class SnowSimulation {
         }
         spawnFlakes()
         if halloween { settlePumpkins(dt: dt) }
+        tendStorm(dt: dt)
+        tendDecor(dt: dt)
 
         for layer in layers {
             layer.refreshTop()
@@ -743,7 +795,7 @@ final class SnowSimulation {
         // Only a cursor that actually displaces snow needs the full rate; one passing near it or resting in it changes nothing.
         let pushed = clock - lastWindowMotion < 0.6 || clock - lastCursorPush < 0.3 || gust != nil || !snowballs.isEmpty || clock - hitAt < 0.6
         // The steady trickle off window corners is a few tiny grains at a time; they read fine at the calm rate.
-        let flying = grains.count > 24 || clock < scatteredUntil || abs(slideWind) > 20
+        let flying = grains.count > 24 || clock < scatteredUntil || abs(slideWind) > 20 || abs(stormWind) > 20 && !flakes.isEmpty
         if pushed {
             pace = .interactive
         } else if flying {
@@ -753,7 +805,9 @@ final class SnowSimulation {
         }
         let changed = wasMoving || !flakes.isEmpty || !grains.isEmpty || !motes.isEmpty || !ghosts.isEmpty || !fallingSigns.isEmpty || !snowballs.isEmpty
             || !splashes.isEmpty || !glassDrops.isEmpty || wet || heightsChanged || windowsChanged || pumpkinsMoved || restyled || borrowedChanged
+            || decorChanged
         restyled = false
+        decorChanged = false
         windowsChanged = false
         borrowedChanged = false
         pumpkinsMoved = false
@@ -1011,6 +1065,203 @@ final class SnowSimulation {
             if abs(bottom - pumpkinBottoms[k]) > 0.01 { pumpkinsMoved = true }
             pumpkinBottoms[k] = bottom
         }
+    }
+
+    // MARK: - New Year
+
+    /// How hard the storm blows, from 0 in calm air to 1 at its strongest.
+    private var stormShare: Float { min(1, abs(stormWind) / 170) }
+
+    /// The storm's gusts, from 0 to 1.
+    private var stormGusts: Float {
+        let t = clock
+        return Float(min(max(0.5 + 0.3 * sin(t * 0.83) * sin(t * 0.31 + 1.3) + 0.2 * sin(t * 2.1 + 0.4), 0), 1))
+    }
+
+    /// What blows the powder off the crests: a sliding Space's wind, or the storm's when that is stronger.
+    private var skimWind: Float {
+        abs(slideWind) >= abs(stormWind) * 0.5 ? slideWind : stormWind * 0.5
+    }
+
+    /// The storm comes up over a few seconds, blows in gusts and dies down as slowly once it is switched off.
+    private func tendStorm(dt: Float) {
+        let target = storm ? stormDirection * (95 + 95 * stormGusts) : 0
+        stormWind += (target - stormWind) * min(1, dt * (storm ? 0.9 : 0.6))
+        if !storm && abs(stormWind) < 0.5 { stormWind = 0 }
+    }
+
+    private func tendDecor(dt: Float) {
+        if newYear { settleOrnaments(dt: dt) }
+        if garland {
+            let tick = Int(clock * 2)
+            if tick != blinkTick {
+                blinkTick = tick
+                decorChanged = true
+            }
+        }
+        guard icicles else { return }
+        if icicleGrowth < 1 {
+            icicleGrowth = min(1, icicleGrowth + dt / 45)
+            decorChanged = true
+        }
+        let tips = icicleList().filter { $0.length > 10 }
+        if clock >= nextDrip {
+            nextDrip = clock + Double(random.range(0.4, 1.6))
+            if !tips.isEmpty, icicleGrowth > 0.3 {
+                let tip = tips[min(Int(random.next() * Float(tips.count)), tips.count - 1)]
+                drips.append((SIMD2(tip.x, tip.top - tip.length), 0))
+            }
+        }
+        guard !drips.isEmpty else { return }
+        for k in drips.indices.reversed() {
+            drips[k].speed += 700 * dt
+            drips[k].position.y -= drips[k].speed * dt
+            let x = drips[k].position.x
+            let floor = x >= 0 && x <= width ? ground.surface(ground.clampedIndex(at: x)) : 0
+            if drips[k].position.y < max(floor, 0) { drips.remove(at: k) }
+        }
+        decorChanged = true
+    }
+
+    /// Each ornament sits on the drift under it, sunk into it a little, like the pumpkins; one a window or the Dock
+    /// covers sinks below the screen's edge until it moves off it.
+    private func settleOrnaments(dt: Float) {
+        let reach: Float = 24
+        let dock = layers.first(where: \.isDock).map { SIMD4($0.base.x - reach, 0, $0.base.x + $0.width + reach, $0.base.y + reach) }
+        let covers = windowFrames + (dock.map { [$0] } ?? [])
+        let settled = ornamentBottoms.isEmpty
+        if settled { ornamentBottoms = Array(repeating: 0, count: NewYear.ornaments.count) }
+        for (k, ornament) in NewYear.ornaments.enumerated() {
+            let x = pumpkinX(ornament.inset)
+            let height = ornament.width * NewYear.aspect(of: ornament.picture)
+            // The snowman's sign stands beside him and goes where he goes.
+            let left = ornament.picture == .snowman ? x - ornament.width / 2 - Float(NewYear.size(of: .sign).width) : x - ornament.width / 2
+            let from = ground.clampedIndex(at: x - ornament.width * 0.3), to = ground.clampedIndex(at: x + ornament.width * 0.3)
+            let surface = (from...to).reduce(Float(0)) { $0 + ground.surface($1) } / Float(to - from + 1)
+            let covered = covers.contains { $0.x < x + ornament.width / 2 && $0.z > left && $0.y < height && $0.w > 0 }
+            let target = covered ? -height - 70 : max(0, surface - height * ornament.sink)
+            let bottom = settled ? target : ornamentBottoms[k] + (target - ornamentBottoms[k]) * min(1, dt * 5)
+            if abs(bottom - ornamentBottoms[k]) > 0.01 { decorChanged = true }
+            ornamentBottoms[k] = bottom
+        }
+    }
+
+    /// What stands in the drift, drawn before the snow so it covers their bottoms.
+    var groundDecor: [DecorSprite] {
+        guard newYear, ornamentBottoms.count == NewYear.ornaments.count else { return [] }
+        var sprites: [DecorSprite] = []
+        for (ornament, bottom) in zip(NewYear.ornaments, ornamentBottoms) {
+            let x = pumpkinX(ornament.inset)
+            let size = SIMD2(ornament.width, ornament.width * NewYear.aspect(of: ornament.picture))
+            if ornament.picture == .snowman {
+                let sign = NewYear.size(of: .sign)
+                let signSize = SIMD2(Float(sign.width), Float(sign.height))
+                sprites.append(DecorSprite(picture: .sign, anchor: SIMD2(x - size.x * 0.45 - signSize.x / 2, bottom - 4), size: signSize, angle: 0.05))
+            }
+            sprites.append(DecorSprite(picture: ornament.picture, anchor: SIMD2(x, bottom), size: size))
+        }
+        return sprites
+    }
+
+    /// What hangs: icicles and their drops, and the garland in front of them.
+    var hangingDecor: [DecorSprite] {
+        var sprites: [DecorSprite] = []
+        if icicles {
+            for icicle in icicleList() where icicle.length > 0.5 {
+                sprites.append(DecorSprite(picture: .icicle, anchor: SIMD2(icicle.x, icicle.top + 1), size: SIMD2(icicle.width, icicle.length + 1),
+                                           pivot: SIMD2(0.5, 1)))
+            }
+            for drip in drips {
+                sprites.append(DecorSprite(picture: .drop, anchor: drip.position, size: SIMD2(3, 4), pivot: SIMD2(0.5, 0.5)))
+            }
+        }
+        if garland { sprites += garlandSprites() }
+        return sprites
+    }
+
+    /// Where the garland's wire runs: from hook to hook under the menu bar, sagging between them.
+    private func garlandCurve(_ x: Float) -> (y: Float, slope: Float) {
+        let top = height - menuBar - 1
+        let hooks = max(1, (width / 160).rounded())
+        let span = width / hooks
+        let u = (x.truncatingRemainder(dividingBy: span)) / span
+        let sag: Float = 16
+        return (top - sag * 4 * u * (1 - u), -sag * 4 * (1 - 2 * u) / span)
+    }
+
+    private func garlandSprites() -> [DecorSprite] {
+        var wire: [DecorSprite] = [], halos: [DecorSprite] = [], bulbs: [DecorSprite] = []
+        let step: Float = 8
+        var x: Float = 0
+        while x < width {
+            let a = garlandCurve(x), next = min(x + step, width)
+            let b = garlandCurve(next - 0.001)
+            let delta = SIMD2(next - x, b.y - a.y)
+            wire.append(DecorSprite(picture: .wire, anchor: SIMD2(x, a.y), size: SIMD2(simd_length(delta) + 0.6, 1.4), pivot: SIMD2(0, 0.5),
+                                    angle: atan2(delta.y, delta.x), tint: SIMD4(0.07, 0.2, 0.09, 1)))
+            x = next
+        }
+        // Three ways of blinking in turn: every other bulb, a running light and a twinkle.
+        let tick = max(blinkTick, 0)
+        let pattern = (tick / 16) % 3
+        let spacing: Float = 26
+        var k = 0
+        var bulbX = spacing / 2
+        while bulbX < width {
+            let curve = garlandCurve(bulbX)
+            let lit: Bool
+            switch pattern {
+            case 0: lit = (k + tick) % 2 == 0
+            case 1: lit = (k - tick % 4 + 4) % 4 != 0
+            default: lit = NewYear.noise(UInt32(k), UInt32(tick)) > 0.3
+            }
+            let color = NewYear.bulbColors[k % NewYear.bulbColors.count]
+            let anchor = SIMD2(bulbX, curve.y + 1)
+            let angle = atan(curve.slope) * 0.6 + (NewYear.noise(UInt32(k), 7) - 0.5) * 0.3
+            let brightness: Float = lit ? 1 : 0.32
+            bulbs.append(DecorSprite(picture: .bulb, anchor: anchor, size: SIMD2(7, 11.2), pivot: SIMD2(0.5, 1), angle: angle,
+                                     tint: SIMD4(color * brightness + (lit ? SIMD3(repeating: 0.12) : .zero), 1), glow: lit ? 1 : 0))
+            if lit {
+                // Added light: much colour, little cover.
+                halos.append(DecorSprite(picture: .halo, anchor: anchor - SIMD2(0, 6.5), size: SIMD2(30, 30), pivot: SIMD2(0.5, 0.5),
+                                         tint: SIMD4(color * 0.5, 0.06), glow: 1))
+            }
+            k += 1
+            bulbX += spacing
+        }
+        return wire + halos + bulbs
+    }
+
+    /// The icicles under each window's bottom edge that is in view, and along the menu bar without the garland:
+    /// where each hangs from, how wide it is and how long it has grown. Each keeps its place and length on its window.
+    private func icicleList() -> [(x: Float, top: Float, width: Float, length: Float)] {
+        var edges: [(left: Float, right: Float, y: Float, seed: UInt32)] = windowFrames.compactMap { frame in
+            guard frame.z - frame.x > 80, frame.y > 24, frame.y < height - menuBar - 4 else { return nil }
+            return (max(frame.x, 0), min(frame.z, width), frame.y, UInt32(max(0, frame.z - frame.x).rounded()))
+        }
+        if !garland && menuBar > 0 { edges.append((0, width, height - menuBar, 1)) }
+        var list: [(x: Float, top: Float, width: Float, length: Float)] = []
+        for edge in edges {
+            let spacing: Float = 11
+            var j: UInt32 = 0
+            var x = edge.left + 7
+            while x < edge.right - 7 {
+                defer {
+                    j += 1
+                    x += spacing
+                }
+                let n = NewYear.noise(j, edge.seed)
+                guard n > 0.22 else { continue }
+                // Hidden behind another window, or that one is in front of it: either way it isn't shown.
+                let hidden = windowFrames.contains { $0.x < x && $0.z > x && $0.y < edge.y - 1 && $0.w > edge.y - 1 }
+                guard !hidden else { continue }
+                let late = NewYear.noise(j &+ 101, edge.seed)
+                let grown = min(max(icicleGrowth * (0.7 + 0.9 * late) - 0.1 * late, 0), 1)
+                let jitter = (NewYear.noise(j &+ 37, edge.seed) - 0.5) * 4
+                list.append((x + jitter, edge.y, 3 + 4 * n, (5 + 30 * n * n) * grown))
+            }
+        }
+        return list
     }
 
     // MARK: - Windows
@@ -1848,7 +2099,10 @@ final class SnowSimulation {
     private func advanceFlakes(dt: Float) {
         let wind = breeze() + slideWind
         // A Space's wind is short: the flakes take it up faster than the slow breeze, or it would be gone first.
-        let follow = min(1, dt * (1.2 + abs(slideWind) * 0.03))
+        let follow = min(1, dt * (1.2 + abs(slideWind) * 0.03 + stormShare * 1.5))
+        // In a storm the snow is driven down faster, and more of it comes to rest downwind.
+        let driven = 1 + 0.7 * stormShare
+        let lee = stormWind < 0 ? -stormShare : stormShare
         let settle = min(1, dt * 1.6)
         let wake = cursorWake()
         airborne = kindCounts()
@@ -1863,7 +2117,7 @@ final class SnowSimulation {
                 // Rain falls slanted, as wind drives it; snow and leaves only drift.
                 flake.velocity.x += (wind * (flake.rain ? 3 : 1) * (0.35 + 0.65 * flake.depth) - flake.velocity.x) * follow
             }
-            flake.velocity.y += (-flake.fallSpeed - flake.velocity.y) * settle
+            flake.velocity.y += (-flake.fallSpeed * driven - flake.velocity.y) * settle
 
             if let wake, !flake.rain { stir(&flake.velocity, at: flake.position, in: wake, dt: dt) }
 
@@ -1925,7 +2179,8 @@ final class SnowSimulation {
                             flip: isFlower(flake.leaf, petal: petal) ? flowerTilt(seed: flake.leaf, phase: flake.phase).face : tumble(flake.leaf),
                             drift: flake.velocity.x)
                     } else {
-                        hit.layer.deposit(flake.size * flake.size * deposition * flake.mass * hit.layer.fill(hit.index), at: flake.position.x, wide: true)
+                        let heaped = hit.layer === ground && lee != 0 ? 1 + 0.8 * lee * (2 * min(max(flake.position.x / width, 0), 1) - 1) : 1
+                        hit.layer.deposit(flake.size * flake.size * deposition * flake.mass * hit.layer.fill(hit.index) * heaped, at: flake.position.x, wide: true)
                     }
                     heightsChanged = true
                     recycle(i)
@@ -3141,7 +3396,7 @@ final class SnowSimulation {
 
     private func breeze() -> Float {
         let t = clock
-        return Float(10 * sin(t * 0.07) + 6 * sin(t * 0.19 + 1.7) + 3 * sin(t * 0.43 + 4.1))
+        return Float(10 * sin(t * 0.07) + 6 * sin(t * 0.19 + 1.7) + 3 * sin(t * 0.43 + 4.1)) + stormWind
     }
 
     private func gustSpeed() -> Float {
@@ -3275,7 +3530,7 @@ final class SnowSimulation {
     /// The wind of a sliding Space skims the drifts, most off the crests that stand above the snow around them:
     /// a little powder flies a short way downwind and settles again.
     private func skim(dt: Float) {
-        let share = abs(slideWind) / slideWindMax
+        let share = max(abs(slideWind) / slideWindMax, stormShare * stormShare * 0.3 * (0.6 + 0.4 * stormGusts))
         guard share > 0.1 else { return }
         // Of leaves it lifts some of those lying on top, never the mass under them.
         let shown = markShown()
@@ -3283,7 +3538,7 @@ final class SnowSimulation {
             let leaf = lying[k]
             guard leaf.layer.shown == shown, let i = leaf.layer.index(at: leaf.layer.heapX + leaf.x),
                   leaf.layer.visible[i], leaf.layer.surface(i) - leaf.layer.base.y < leaf.top + 2 else { continue }
-            fly(k, velocity: SIMD2(slideWind * random.range(1.5, 3), random.range(30, 120)))
+            fly(k, velocity: SIMD2(skimWind * random.range(1.5, 3), random.range(30, 120)))
         }
         for layer in layers {
             let count = layer.count
@@ -3310,14 +3565,14 @@ final class SnowSimulation {
         guard grains.count < maxGrains else { return }
         grains.append(Grain(
             position: position + SIMD2(random.range(-1, 1), random.range(-2, 0)),
-            velocity: SIMD2(slideWind * random.range(1.5, 3), random.range(60, 260)),
+            velocity: SIMD2(skimWind * random.range(1.5, 3), random.range(60, 260)),
             area: area,
             size: random.range(1.1, 2.4)
         ))
         guard random.next() < 0.3, motes.count < maxMotes else { return }
         motes.append(Mote(
             position: position,
-            velocity: SIMD2(slideWind * random.range(0.8, 2), random.range(20, 90)),
+            velocity: SIMD2(skimWind * random.range(0.8, 2), random.range(20, 90)),
             size: random.range(6, 13),
             alpha: random.range(0.06, 0.12),
             life: random.range(0.5, 1)

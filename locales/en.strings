@@ -11,6 +11,12 @@
 "rain" = "Rain";
 "blossom" = "Cherry Blossom";
 "halloween" = "Halloween";
+"newyear" = "New Year";
+"newyear.decor" = "New Year decorations";
+"storm" = "Snowstorm";
+"garland" = "Garland";
+"icicles" = "Icicles";
+"newyear.sign" = "Happy New Year!";
 "settings" = "Settings";
 "behavior" = "Behavior";
 "display" = "Display";

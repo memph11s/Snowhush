@@ -39,6 +39,10 @@ enum Preferences {
     private static let autumnKey = "autumn"
     private static let performanceKey = "performance"
     private static let fallingOpacityKey = "fallingOpacity"
+    private static let newYearKey = "newYear"
+    private static let stormKey = "storm"
+    private static let garlandKey = "garland"
+    private static let iciclesKey = "icicles"
 
     static func registerDefaults() {
         let calm = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -58,6 +62,10 @@ enum Preferences {
             autumnKey: false,
             mixedKey: false,
             fallingOpacityKey: 1.0,
+            newYearKey: false,
+            stormKey: false,
+            garlandKey: false,
+            iciclesKey: false,
         ])
         if defaults.object(forKey: intensityKey) == nil, let stop = defaults.object(forKey: snowfallKey) as? Int {
             defaults.set([0, 0.25, 0.5, 0.75, 0.5][min(max(stop, 0), 4)], forKey: intensityKey)
@@ -131,6 +139,30 @@ enum Preferences {
     static var deepInteraction: Bool {
         get { defaults.bool(forKey: deepInteractionKey) }
         set { defaults.set(newValue, forKey: deepInteractionKey) }
+    }
+
+    /// Ornaments, gifts and a snowman in the drift.
+    static var newYear: Bool {
+        get { defaults.bool(forKey: newYearKey) }
+        set { defaults.set(newValue, forKey: newYearKey) }
+    }
+
+    /// A strong wind with gusts: the snow flies slanted and the drifts are blown.
+    static var storm: Bool {
+        get { defaults.bool(forKey: stormKey) }
+        set { defaults.set(newValue, forKey: stormKey) }
+    }
+
+    /// Blinking lights under the menu bar.
+    static var garland: Bool {
+        get { defaults.bool(forKey: garlandKey) }
+        set { defaults.set(newValue, forKey: garlandKey) }
+    }
+
+    /// Icicles growing under the windows' bottom edges.
+    static var icicles: Bool {
+        get { defaults.bool(forKey: iciclesKey) }
+        set { defaults.set(newValue, forKey: iciclesKey) }
     }
 
     /// Halloween turned on from the menu, for every day.

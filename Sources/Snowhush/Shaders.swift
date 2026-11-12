@@ -1250,4 +1250,47 @@ fragment float4 pumpkinFragment(PumpkinOut in [[stage_in]], texture2d<float> she
     float halo = u.lantern.w * 0.3 * flame * exp(-dot(d, d));
     return color + float4(candle * halo, halo) * (1.0 - color.a);
 }
+
+struct DecorUniforms {
+    float4 tint;
+    float2 anchor;
+    float2 size;
+    float2 pivot;
+    float angle;
+    float glow;
+};
+
+struct DecorOut {
+    float4 position [[position]];
+    float2 uv;
+    float2 world;
+    float4 tint;
+    float glow;
+};
+
+/// One quad per instance: a New Year ornament, a garland's bulb or a piece of its wire, an icicle or a drop.
+vertex DecorOut decorVertex(uint vid [[vertex_id]], uint iid [[instance_id]], const device DecorUniforms *all [[buffer(0)]],
+                            constant Uniforms &u [[buffer(1)]]) {
+    DecorUniforms d = all[iid];
+    float2 corner = float2(float(vid & 1), float(vid >> 1));
+    float2 local = (corner - d.pivot) * d.size;
+    float c = cos(d.angle), s = sin(d.angle);
+    float2 world = d.anchor + float2(local.x * c - local.y * s, local.x * s + local.y * c);
+    DecorOut out;
+    out.position = float4((world + u.shake.xy) / u.viewSize * 2.0 - 1.0, 0.0, 1.0);
+    out.uv = float2(corner.x, 1.0 - corner.y);
+    out.world = world;
+    out.tint = d.tint;
+    out.glow = d.glow;
+    return out;
+}
+
+fragment float4 decorFragment(DecorOut in [[stage_in]], texture2d<float> picture [[texture(0)]], constant Uniforms &u [[buffer(1)]]) {
+    constexpr sampler smooth(filter::linear, mip_filter::linear, address::clamp_to_edge);
+    float4 color = picture.sample(smooth, in.uv);
+    // A light shines by itself; the rest is dimmed by the night like the snow, and warmed by the candles.
+    color.rgb *= mix(mix(float3(1.0), u.light.rgb, 0.6), float3(1.0), in.glow);
+    color.rgb = mix(color.rgb, candle * color.a, candlelight(u, in.world) * 0.3 * (1.0 - in.glow));
+    return color * in.tint;
+}
 """

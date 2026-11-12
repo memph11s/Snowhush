@@ -8,6 +8,12 @@
 "rain" = "Pluie";
 "blossom" = "Fleurs de cerisier";
 "halloween" = "Halloween";
+"newyear" = "Nouvel An";
+"newyear.decor" = "Décorations du Nouvel An";
+"storm" = "Tempête de neige";
+"garland" = "Guirlande";
+"icicles" = "Stalactites de glace";
+"newyear.sign" = "Bonne année !";
 "settings" = "Réglages";
 "behavior" = "Comportement";
 "display" = "Affichage";

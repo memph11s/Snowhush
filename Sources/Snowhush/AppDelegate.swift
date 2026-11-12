@@ -25,6 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
     private var meltItem: NSMenuItem!
     private var clearItem: NSMenuItem!
     private var halloweenItem: NSMenuItem!
+    private var newYearItem: NSMenuItem!
+    private var stormItem: NSMenuItem!
+    private var garlandItem: NSMenuItem!
+    private var iciclesItem: NSMenuItem!
     private var mixedItem: NSMenuItem!
     private var modeItems: [(item: NSMenuItem, mode: Mode)] = []
     private var maxPerformanceItem: NSMenuItem!
@@ -98,6 +102,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
                 snow.simulation.snowfallHeld = snowfallHeld
                 snow.simulation.snowfallReleased = { [weak self] in self?.releaseSnowfall() }
                 snow.halloween = halloween
+                snow.newYear = Preferences.newYear
+                snow.storm = Preferences.storm
+                snow.garland = Preferences.garland
+                snow.icicles = Preferences.icicles
                 snow.modes = Preferences.modes
                 snow.maxFrameRate = Preferences.maxPerformance
                 snow.activityChanged = { [weak self] in self?.updateActivity() }
@@ -191,6 +199,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         modes.addItem(.separator())
         halloweenItem = add(tr("halloween"), #selector(toggleHalloween), to: modes)
         menu.addItem(withTitle: tr("mode"), action: nil, keyEquivalent: "").submenu = modes
+        // Any day of the year: each piece is switched on and off by itself.
+        let newYear = NSMenu()
+        newYear.autoenablesItems = false
+        newYearItem = toggle(tr("newyear.decor"), #selector(toggleNewYear), to: newYear)
+        garlandItem = toggle(tr("garland"), #selector(toggleGarland), to: newYear)
+        iciclesItem = toggle(tr("icicles"), #selector(toggleIcicles), to: newYear)
+        newYear.addItem(.separator())
+        stormItem = toggle(tr("storm"), #selector(toggleStorm), to: newYear)
+        // Several are wanted at once, so the menu stays open between them.
+        for item in [newYearItem, garlandItem, iciclesItem, stormItem] { (item?.view as? MenuToggle)?.staysOpen = { true } }
+        menu.addItem(withTitle: tr("newyear"), action: nil, keyEquivalent: "").submenu = newYear
         clearItem = add(tr("clear.snow"), #selector(clearSnow), to: menu)
         menu.addItem(.separator())
         let settings = NSMenu()
@@ -263,6 +282,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         clearItem.isEnabled = screens.contains { $0.simulation.hasSnow || $0.simulation.spriteCount > 0 }
         halloweenItem.state = Halloween.isWanted ? .on : .off
         halloweenItem.isEnabled = modes == [.snow]
+        newYearItem.state = Preferences.newYear ? .on : .off
+        stormItem.state = Preferences.storm ? .on : .off
+        garlandItem.state = Preferences.garland ? .on : .off
+        iciclesItem.state = Preferences.icicles ? .on : .off
         maxPerformanceItem.state = Preferences.maxPerformance ? .on : .off
         behindWindowsItem.state = behindWindows ? .on : .off
         fullScreenItem.state = Preferences.showOverFullScreen ? .on : .off
@@ -377,6 +400,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
     @objc private func toggleMaxPerformance() {
         Preferences.maxPerformance.toggle()
         for snow in screens { snow.maxFrameRate = Preferences.maxPerformance }
+    }
+
+    @objc private func toggleNewYear() {
+        Preferences.newYear.toggle()
+        for snow in screens { snow.newYear = Preferences.newYear }
+    }
+
+    @objc private func toggleStorm() {
+        Preferences.storm.toggle()
+        for snow in screens { snow.storm = Preferences.storm }
+    }
+
+    @objc private func toggleGarland() {
+        Preferences.garland.toggle()
+        for snow in screens { snow.garland = Preferences.garland }
+    }
+
+    @objc private func toggleIcicles() {
+        Preferences.icicles.toggle()
+        for snow in screens { snow.icicles = Preferences.icicles }
     }
 
     @objc private func toggleHalloween() {
