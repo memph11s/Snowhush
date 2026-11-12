@@ -27,6 +27,11 @@ cbuffer Uniforms : register(b0) {
     float wilt;
     // How snowflakes are drawn: 0 soft and round, 1 crystals, 2 big ragged flakes.
     float flakeStyle;
+    // What white snow is multiplied by.
+    float4 snowTint;
+    // The garland along the top of the screen: its style, its blink (below zero while it doesn't blink), its colour and
+    // the height it hangs from.
+    float4 garland;
 };
 
 Buffer<float> heights : register(t0);
@@ -1020,7 +1025,7 @@ float4 spriteFragment(SpriteOut i) : SV_Target {
     float3 core = float3(0.965, 0.975, 0.995);
     float3 edge = float3(0.62, 0.67, 0.77);
     float3 color = lerp(core, edge, saturate(smoothstep(0.35, 1.0, r) * 0.65 + shading));
-    color = lerp(color, i.tint.rgb, i.tint.a) * light.rgb;
+    color = lerp(color * snowTint.rgb, i.tint.rgb, i.tint.a) * light.rgb;
     color = lerp(color, candle, i.warm * 0.7);
     a = min(1.0, a * (1.0 + i.warm * 0.8));
     return float4(color * a, a);
@@ -1173,6 +1178,7 @@ float4 pileFragment(PileOut i) : SV_Target {
             float twinkle = pow(saturate(sin(time * (0.6 + seed * 1.8) + seed * 90.0)), 28.0);
             color = lerp(color, float3(1.0, 1.0, 1.0), twinkle * exp(-depth / 7.0));
         }
+        color *= snowTint.rgb;
     }
     // Where leaves are, a leaf shows where one lies; mostly leaves, the gaps between them are the heap's shadow too.
     float leafy = 0.0;
@@ -1190,6 +1196,156 @@ float4 pileFragment(PileOut i) : SV_Target {
     color = lerp(color, rim.rgb, rim.a * exp(-depth / 2.5) * (1.0 - leafy));
     color = lerp(color, candle, candlelight(world) * (0.35 + 0.65 * exp(-depth / 14.0)) * 0.55);
     return float4(color * coverage, coverage);
+}
+
+// The garland along the top of the screen, drawn as it hangs: its wire sagging from hook to hook, its lights and
+// their glow. `garland` is its style, its blink, its colour and the top of the screen it hangs from.
+static const float3 GARLAND_BULBS[5] = {float3(1.0, 0.22, 0.2), float3(1.0, 0.78, 0.25), float3(0.25, 0.9, 0.4), float3(0.3, 0.6, 1.0),
+                                      float3(0.95, 0.35, 0.9)};
+static const float3 GARLAND_COLORS[6] = {float3(1.0, 1.0, 1.0), float3(1.0, 0.22, 0.2), float3(1.0, 0.78, 0.25), float3(0.25, 0.9, 0.4),
+                                       float3(0.3, 0.6, 1.0), float3(0.85, 0.92, 1.0)};
+
+float garlandNoise(uint a, uint b) {
+    uint n = a * 374761393u + b * 668265263u;
+    n = (n ^ (n >> 13u)) * 1274126177u;
+    n ^= n >> 16u;
+    return float(n & 65535u) / 65535.0;
+}
+
+// Where the wire runs at `x`: its height and slope.
+float2 garlandCurve(float x, float top, float width) {
+    float hooks = max(1.0, floor(width / 160.0 + 0.5));
+    float span = width / hooks;
+    float u = frac(x / span);
+    float sag = 16.0;
+    return float2(top - sag * 4.0 * u * (1.0 - u), -sag * 4.0 * (1.0 - 2.0 * u) / span);
+}
+
+bool garlandLit(int k, int tick, bool blinks) {
+    if (!blinks) return true;
+    int pattern = (tick / 16) % 3;
+    if (pattern == 0) return (k + tick) % 2 == 0;
+    if (pattern == 1) return (k - tick % 4 + 4) % 4 != 0;
+    return garlandNoise(uint(k), uint(tick)) > 0.3;
+}
+
+float3 garlandColor(int k, int style, int colour) {
+    if (colour > 0) return GARLAND_COLORS[colour];
+    if (style == 1) return float3(1.0, 0.8, 0.48);
+    if (style == 2) return k % 2 == 0 ? float3(1.0, 0.78, 0.25) : GARLAND_BULBS[(k / 2) % 5];
+    return GARLAND_BULBS[k % 5];
+}
+
+// A five-pointed star's distance, negative inside, `r` its outer radius.
+float garlandStar(float2 p, float r) {
+    float n = 5.0;
+    float angle = atan2(p.x, p.y);
+    float sector = 6.2832 / n;
+    float a = (angle + sector * 0.5) - sector * floor((angle + sector * 0.5) / sector) - sector * 0.5;
+    float2 q = length(p) * float2(cos(a), abs(sin(a)));
+    float2 tip = float2(r, 0.0);
+    float2 notch = r * 0.45 * float2(cos(sector * 0.5), sin(sector * 0.5));
+    float2 e = notch - tip;
+    float2 w = q - tip;
+    float h = clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+    float d = length(w - e * h);
+    float side = e.x * w.y - e.y * w.x;
+    return side > 0.0 ? -d : d;
+}
+
+// Premultiplied colour of the garland at `p`, in points; `light` dims the wire at night, not the lights.
+float4 garlandAt(float2 p, float4 garland, float width, float3 light) {
+    int style = int(garland.x + 0.5);
+    int tick = int(garland.y + 0.5);
+    bool blinks = garland.y >= 0.0;
+    int colour = int(garland.z + 0.5);
+    float top = garland.w;
+    if (p.y < top - 48.0) return float4(0.0, 0.0, 0.0, 0.0);
+    float spacing = style == 1 ? 13.0 : style == 2 ? 34.0 : 26.0;
+    float4 color = float4(0.0, 0.0, 0.0, 0.0);
+    // Glow first, under the wire: much colour, little cover.
+    int nearest = int(floor((p.x - spacing * 0.5) / spacing + 0.5));
+    float halo = style == 1 ? 9.0 : style == 2 ? 17.0 : 15.0;
+    for (int j = -2; j <= 2; j++) {
+        int k = nearest + j;
+        float x = spacing * 0.5 + float(k) * spacing;
+        if (k < 0 || x >= width || !garlandLit(k, tick, blinks)) continue;
+        float2 curve = garlandCurve(x, top, width);
+        float2 centre = float2(x, curve.x + (style == 1 ? -1.5 : style == 2 ? -6.0 : -5.5));
+        float g = exp(-pow(length(p - centre) / (halo * 0.45), 2.0));
+        color.rgb += garlandColor(k, style, colour) * g * 0.5;
+        color.a += g * 0.06;
+    }
+    // The wire.
+    float2 wire = garlandCurve(p.x, top, width);
+    float across = abs(p.y - wire.x) / sqrt(1.0 + wire.y * wire.y);
+    float wireCover = 1.0 - smoothstep(0.35, 1.1, across);
+    float3 wireColor = float3(0.07, 0.2, 0.09) * lerp(float3(1.0, 1.0, 1.0), light, 0.6);
+    color = float4(wireColor * wireCover, wireCover) + color * (1.0 - wireCover);
+    // The lights on it.
+    for (int j = -1; j <= 1; j++) {
+        int k = nearest + j;
+        float x = spacing * 0.5 + float(k) * spacing;
+        if (k < 0 || x >= width) continue;
+        bool lit = garlandLit(k, tick, blinks);
+        float2 curve = garlandCurve(x, top, width);
+        float3 hue = garlandColor(k, style, colour);
+        float tilt = atan(curve.y) * 0.6 + (garlandNoise(uint(k), 7u) - 0.5) * 0.3;
+        float2 d = p - float2(x, curve.x + (style == 1 ? -1.5 : 1.0));
+        float c = cos(-tilt), s = sin(-tilt);
+        d = float2(d.x * c - d.y * s, d.x * s + d.y * c);
+        float cover = 0.0;
+        float3 shade = float3(0.0, 0.0, 0.0);
+        if (style == 1) {
+            float r = length(d);
+            cover = 1.0 - smoothstep(1.6, 2.4, r);
+            shade = hue * (lit ? 1.0 : 0.45) + (lit ? float3(0.1, 0.1, 0.1) : float3(0.0, 0.0, 0.0));
+            shade = lerp(shade, float3(1.0, 1.0, 1.0), lit ? (1.0 - smoothstep(0.0, 1.2, r)) * 0.6 : 0.0);
+        } else if (style == 2) {
+            float star = garlandStar(d + float2(0.0, 6.6), 6.8);
+            cover = 1.0 - smoothstep(-0.4, 0.4, star);
+            shade = hue * (lit ? 1.0 : 0.32) + (lit ? float3(0.12, 0.12, 0.12) : float3(0.0, 0.0, 0.0));
+            shade *= 0.85 + 0.25 * clamp(-star / 3.0, 0.0, 1.0);
+        } else {
+            // A cap at the wire, and the glass bulb hanging from it.
+            float2 capD = abs(d + float2(0.0, 1.2)) - float2(1.5, 1.3);
+            float cap = length(max(capD, 0.0)) + min(max(capD.x, capD.y), 0.0);
+            float2 q = (d + float2(0.0, 6.6)) / float2(3.3, 4.4);
+            q.x *= 1.0 + 0.18 * clamp(q.y, -1.0, 1.0);
+            float glass = (length(q) - 1.0) * 3.5;
+            float capCover = 1.0 - smoothstep(-0.4, 0.4, cap);
+            float glassCover = 1.0 - smoothstep(-0.5, 0.5, glass);
+            float3 body = hue * (lit ? 1.0 : 0.32) + (lit ? float3(0.12, 0.12, 0.12) : float3(0.0, 0.0, 0.0));
+            // A glint up on the glass.
+            float glint = exp(-pow(length(d - float2(-1.1, -4.6)) / 1.0, 2.0)) * (lit ? 0.7 : 0.3);
+            body = lerp(body, float3(1.0, 1.0, 1.0), glint);
+            cover = max(capCover, glassCover);
+            shade = glassCover >= capCover ? body : float3(0.45, 0.47, 0.5) * lerp(float3(1.0, 1.0, 1.0), light, 0.6);
+        }
+        color = float4(shade * cover, cover) + color * (1.0 - cover);
+    }
+    return color;
+}
+
+struct GarlandOut {
+    float4 position : SV_Position;
+    float2 world : TEXCOORD0;
+};
+
+// A band along the top of the screen, as deep as the garland hangs and its glow reaches.
+GarlandOut garlandVertex(uint vid : SV_VertexID) {
+    float2 corner = float2(float(vid & 1), float(vid >> 1));
+    float2 world = float2(corner.x * viewSize.x, garland.w - 50.0 + corner.y * 52.0);
+    GarlandOut o;
+    o.world = world;
+    o.position = float4(world / viewSize * 2.0 - 1.0, 0.0, 1.0);
+    return o;
+}
+
+float4 garlandFragment(GarlandOut i) : SV_Target {
+    float4 color = garlandAt(i.world, garland, viewSize.x, light.rgb);
+    if (color.a < 0.002) discard;
+    return color;
 }
 
 // The sign being drawn: its stick's foot, its size in points, how far it is turned and the drift's surface it stands in.

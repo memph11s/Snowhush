@@ -38,6 +38,8 @@ pub struct Settings {
     pub storm: bool,
     /// How snowflakes are drawn: 0 soft, 1 crystals, 2 big flakes.
     pub flake_style: u8,
+    /// What colour snow is: an index into `SNOW_TINTS`.
+    pub snow_color: u8,
 }
 
 impl Settings {
@@ -78,6 +80,7 @@ impl Settings {
             opacity: read("fallingOpacity").map_or(100, |v| v.clamp(10, 100)),
             storm: read("storm").is_some_and(|v| v != 0),
             flake_style: read("flakeStyle").map_or(0, |v| v.min(2) as u8),
+            snow_color: read("snowColor").map_or(0, |v| v.min(5) as u8),
             mode,
             mixed: read("mixed").is_some_and(|v| v != 0),
             mix: mix_of(read("mix0"), read("mix1"), mode),
@@ -91,7 +94,7 @@ impl Settings {
     pub fn save(&self) {
         let Some(folder) = config_dir() else { return };
         let text = format!(
-            "intensity={}\nsettleGround={}\nsettlePanel={}\nmeltSnow={}\nsnowOnWindows={}\nbehindWindows={}\nshowOverFullScreen={}\nshowInScreenshots={}\ninstalledAt={}\nhalloweenOn={}\nhalloweenSkipped={}\nmode={}\nmixed={}\nmix0={}\nmix1={}\nautumn={}\nperformance={}\nfallingOpacity={}\nstorm={}\nflakeStyle={}\n",
+            "intensity={}\nsettleGround={}\nsettlePanel={}\nmeltSnow={}\nsnowOnWindows={}\nbehindWindows={}\nshowOverFullScreen={}\nshowInScreenshots={}\ninstalledAt={}\nhalloweenOn={}\nhalloweenSkipped={}\nmode={}\nmixed={}\nmix0={}\nmix1={}\nautumn={}\nperformance={}\nfallingOpacity={}\nstorm={}\nflakeStyle={}\nsnowColor={}\n",
             self.intensity,
             self.ground as u32,
             self.panel as u32,
@@ -111,7 +114,8 @@ impl Settings {
             self.max_performance as u32,
             self.opacity,
             self.storm as u32,
-            self.flake_style
+            self.flake_style,
+            self.snow_color
         );
         let _ = std::fs::create_dir_all(&folder);
         let _ = std::fs::write(folder.join("settings"), text);

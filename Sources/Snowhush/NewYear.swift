@@ -72,6 +72,17 @@ enum NewYear {
         SIMD3(1.0, 0.22, 0.2), SIMD3(1.0, 0.78, 0.25), SIMD3(0.25, 0.9, 0.4), SIMD3(0.3, 0.6, 1.0), SIMD3(0.95, 0.35, 0.9),
     ]
 
+    /// The colours the garland's lights can all be instead of their own: red, gold, green, blue and cold white, after
+    /// the own colours at 0.
+    static let lightColors: [SIMD3<Float>] = [
+        SIMD3(1, 1, 1), SIMD3(1.0, 0.22, 0.2), SIMD3(1.0, 0.78, 0.25), SIMD3(0.25, 0.9, 0.4), SIMD3(0.3, 0.6, 1.0), SIMD3(0.85, 0.92, 1.0),
+    ]
+
+    /// What white snow is multiplied by for each of its colours: white, blue, warm, pink, lilac and mint.
+    static let snowTints: [SIMD3<Float>] = [
+        SIMD3(1, 1, 1), SIMD3(0.78, 0.9, 1.0), SIMD3(1.0, 0.93, 0.82), SIMD3(1.0, 0.82, 0.9), SIMD3(0.88, 0.84, 1.0), SIMD3(0.82, 1.0, 0.92),
+    ]
+
     /// Pixels per point the pictures are drawn at.
     static let scale: CGFloat = 3
 

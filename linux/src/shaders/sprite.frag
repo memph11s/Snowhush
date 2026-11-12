@@ -18,6 +18,8 @@ uniform float blossom;
 uniform float wilt;
 // One while running drops and beads are drawn as glass, from their field; without it, they are drawn here.
 uniform float glass;
+// What white snow is multiplied by.
+uniform vec3 snowTint;
 
 in vec2 vCoord;
 in float vAlpha;
@@ -454,6 +456,7 @@ vec4 ghost(vec2 p, bool hidden) {
     vec3 drift = mix(surface, shadow, clamp((1.0 - exp(-below / 30.0)) * 0.32 + 0.064 * exp(-below / 5.0), 0.0, 1.0));
     color = mix(color, mix(drift, vec3(0.975, 0.982, 0.995), exp(-below * 0.9) * 0.6), smoothstep(1.0, 4.0, below));
     if (autumn > 0.5) color = litter(gl_FragCoord.xy) * (1.0 - clamp(shade, 0.0, 1.0) * 0.6);
+    else color *= snowTint;
     color += (hash(floor(gl_FragCoord.xy)) - 0.5) * 0.02;
     float glint = autumn > 0.5 ? 0.0 : hash(floor(gl_FragCoord.xy * 0.5) + 31.7);
     if (glint > 0.992) {
@@ -705,7 +708,7 @@ void main() {
     vec3 core = vec3(0.965, 0.975, 0.995);
     vec3 edge = vec3(0.62, 0.67, 0.77);
     vec3 color = mix(core, edge, clamp(smoothstep(0.35, 1.0, r) * 0.65 + shading, 0.0, 1.0));
-    color = mix(color, vTint.rgb, vTint.a) * light.rgb;
+    color = mix(color * snowTint, vTint.rgb, vTint.a) * light.rgb;
     color = mix(color, candle, vWarm * 0.7);
     a = min(1.0, a * (1.0 + vWarm * 0.8));
     fragment = vec4(color * a, a);

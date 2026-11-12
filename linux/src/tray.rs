@@ -292,6 +292,27 @@ impl ksni::Tray for Tray {
                 ..Default::default()
             }
             .into(),
+            SubMenu {
+                label: tr("snow.color").into(),
+                submenu: vec![
+                    RadioGroup {
+                        selected: settings.snow_color as usize,
+                        select: Box::new(|tray: &mut Tray, index| {
+                            tray.change(|settings| {
+                                settings.snow_color = index.min(5) as u8;
+                                Command::SnowColor(settings.snow_color)
+                            });
+                        }),
+                        options: ["snow.color.white", "snow.color.blue", "snow.color.warm", "snow.color.pink", "snow.color.lilac", "snow.color.mint"]
+                            .iter()
+                            .map(|key| RadioItem { label: tr(key).into(), ..Default::default() })
+                            .collect(),
+                    }
+                    .into(),
+                ],
+                ..Default::default()
+            }
+            .into(),
             CheckmarkItem {
                 label: tr("storm").into(),
                 checked: settings.storm,

@@ -22,6 +22,8 @@ struct Uniforms {
     float4 shake;
     float4 pumpkins[3];
     float flakeStyle;
+    // What white snow is multiplied by.
+    float4 snowTint;
 };
 
 struct Sprite {
@@ -1031,6 +1033,8 @@ fragment float4 spriteFragment(SpriteVaryings v [[stage_in]], float2 coord [[poi
         if (u.autumn > 0.5) {
             float2 world = float2(in.position.x / u.scale, u.viewSize.y - in.position.y / u.scale);
             color = litter(world, u.blossom, u.wilt) * (1.0 - saturate(shade) * 0.6);
+        } else {
+            color *= u.snowTint.rgb;
         }
         color += (hash(floor(in.position.xy)) - 0.5) * 0.02;
         float glint = u.autumn > 0.5 ? 0.0 : hash(floor(in.position.xy * 0.5) + 31.7);
@@ -1109,7 +1113,7 @@ fragment float4 spriteFragment(SpriteVaryings v [[stage_in]], float2 coord [[poi
     float3 core = float3(0.965, 0.975, 0.995);
     float3 rim = float3(0.62, 0.67, 0.77);
     float3 color = mix(core, rim, saturate(smoothstep(0.35, 1.0, r) * 0.65 + shading));
-    color = mix(color, in.tint.rgb, in.tint.a) * in.light;
+    color = mix(color * u.snowTint.rgb, in.tint.rgb, in.tint.a) * in.light;
     color = mix(color, candle, in.warm * 0.7);
     a = min(1.0, a * (1.0 + in.warm * 0.8));
     return float4(color * a, a);
@@ -1183,6 +1187,7 @@ fragment float4 pileFragment(PileOut in [[stage_in]],
             float twinkle = pow(saturate(sin(u.time * (0.6 + seed * 1.8) + seed * 90.0)), 28.0);
             color = mix(color, float3(1.0), twinkle * exp(-depth / 7.0));
         }
+        color *= u.snowTint.rgb;
     }
     // Where leaves are, a leaf shows where one lies; mostly leaves, the gaps between them are the heap's shadow too.
     float leafy = 0.0;

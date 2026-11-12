@@ -63,6 +63,15 @@ const ID_OPACITY_FOLD: u32 = 221;
 const ID_STORM: u32 = 222;
 /// Snowflake styles: `ID_FLAKES` + the style.
 const ID_FLAKES: u32 = 223;
+/// Snow colours: `ID_SNOW_COLOR` + the colour.
+const ID_SNOW_COLOR: u32 = 240;
+const ID_GARLAND: u32 = 250;
+const ID_GARLAND_BLINKS: u32 = 251;
+/// Garland styles: `ID_GARLAND_STYLE` + the style.
+const ID_GARLAND_STYLE: u32 = 252;
+/// Garland colours: `ID_GARLAND_COLOR` + the colour.
+const ID_GARLAND_COLOR: u32 = 256;
+const ID_GARLAND_COLOR_LAST: u32 = ID_GARLAND_COLOR + 5;
 /// Opacity from 10% up in steps of 5%: `ID_OPACITY` + the step.
 const ID_OPACITY: u32 = 400;
 const OPACITY_STEPS: u32 = 19;
@@ -447,6 +456,32 @@ fn entries(settings: &Settings, login: bool, sliders: bool) -> Vec<Entry> {
         .collect();
     entries.push(Entry::Submenu { label: tr("flakes.style").to_string(), entries: styles });
     entries.push(Entry::toggle(ID_STORM, tr("storm"), settings.storm, true));
+    let colors = ["snow.color.white", "snow.color.blue", "snow.color.warm", "snow.color.pink", "snow.color.lilac", "snow.color.mint"]
+        .iter()
+        .enumerate()
+        .map(|(k, key)| Entry::choice(ID_SNOW_COLOR + k as u32, tr(key), settings.snow_color as usize == k))
+        .collect();
+    entries.push(Entry::Submenu { label: tr("snow.color").to_string(), entries: colors });
+    let mut new_year = vec![
+        Entry::toggle(ID_GARLAND, tr("garland"), settings.garland, true),
+        Entry::toggle(ID_GARLAND_BLINKS, tr("garland.blinks"), settings.garland_blinks, settings.garland),
+        Entry::Separator,
+        Entry::header(tr("garland.style")),
+    ];
+    new_year.extend(
+        ["garland.style.bulbs", "garland.style.fairy", "garland.style.stars"]
+            .iter()
+            .enumerate()
+            .map(|(k, key)| Entry::choice(ID_GARLAND_STYLE + k as u32, tr(key), settings.garland_style as usize == k)),
+    );
+    new_year.extend([Entry::Separator, Entry::header(tr("garland.color"))]);
+    new_year.extend(
+        ["garland.color.multi", "garland.color.red", "garland.color.gold", "garland.color.green", "garland.color.blue", "garland.color.white"]
+            .iter()
+            .enumerate()
+            .map(|(k, key)| Entry::choice(ID_GARLAND_COLOR + k as u32, tr(key), settings.garland_color as usize == k)),
+    );
+    entries.push(Entry::Submenu { label: tr("newyear").to_string(), entries: new_year });
     if !heaps.is_empty() {
         entries.push(Entry::item(ID_CLEAR, text::kinds("clear", &heaps), false, true));
     }
@@ -602,6 +637,30 @@ fn choose(window: HWND, chosen: u32, login: bool) {
                 ID_STORM => {
                     settings.storm = !settings.storm;
                     Command::Storm(settings.storm)
+                }
+                id if (ID_SNOW_COLOR..ID_SNOW_COLOR + 6).contains(&id) => {
+                    settings.snow_color = (id - ID_SNOW_COLOR) as u8;
+                    Command::SnowColor(settings.snow_color)
+                }
+                ID_GARLAND | ID_GARLAND_BLINKS | ID_GARLAND_STYLE..=ID_GARLAND_COLOR_LAST => {
+                    match chosen {
+                        ID_GARLAND => settings.garland = !settings.garland,
+                        ID_GARLAND_BLINKS => settings.garland_blinks = !settings.garland_blinks,
+                        id if id < ID_GARLAND_COLOR => {
+                            settings.garland_style = (id - ID_GARLAND_STYLE) as u8;
+                            settings.garland = true;
+                        }
+                        id => {
+                            settings.garland_color = (id - ID_GARLAND_COLOR) as u8;
+                            settings.garland = true;
+                        }
+                    }
+                    Command::Garland {
+                        on: settings.garland,
+                        blinks: settings.garland_blinks,
+                        style: settings.garland_style,
+                        color: settings.garland_color,
+                    }
                 }
                 ID_WINDOWS => {
                     settings.snow_on_windows = !settings.snow_on_windows;

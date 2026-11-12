@@ -80,6 +80,11 @@ struct Uniforms {
     wilt: f32,
     /// How snowflakes are drawn: 0 soft, 1 crystals, 2 big flakes.
     flake_style: f32,
+    /// What white snow is multiplied by.
+    snow_tint: [f32; 4],
+    /// The garland along the top of the screen: its style, its blink (below zero while it doesn't blink), its colour and
+    /// the height it hangs from.
+    garland: [f32; 4],
 }
 
 /// Where a sign stands: its stick's foot, its size in points, how far it is turned and the drift's surface it comes up out of.
@@ -144,6 +149,8 @@ pub struct Gpu {
     pile_fragment: ID3D11PixelShader,
     sign_vertex: ID3D11VertexShader,
     sign_fragment: ID3D11PixelShader,
+    garland_vertex: ID3D11VertexShader,
+    garland_fragment: ID3D11PixelShader,
     pumpkin_vertex: ID3D11VertexShader,
     pumpkin_fragment: ID3D11PixelShader,
     /// Drops on the glass: their bumps added up into a field, and the glass drawn from it.
@@ -199,6 +206,8 @@ impl Gpu {
             let pile_fragment = pixel_shader(&device, &compile(s!("pileFragment"), s!("ps_4_0"))?)?;
             let sign_vertex = vertex_shader(&device, &compile(s!("signVertex"), s!("vs_4_0"))?)?;
             let sign_fragment = pixel_shader(&device, &compile(s!("signFragment"), s!("ps_4_0"))?)?;
+            let garland_vertex = vertex_shader(&device, &compile(s!("garlandVertex"), s!("vs_4_0"))?)?;
+            let garland_fragment = pixel_shader(&device, &compile(s!("garlandFragment"), s!("ps_4_0"))?)?;
             let pumpkin_vertex = vertex_shader(&device, &compile(s!("pumpkinVertex"), s!("vs_4_0"))?)?;
             let pumpkin_fragment = pixel_shader(&device, &compile(s!("pumpkinFragment"), s!("ps_4_0"))?)?;
             let field_fragment = pixel_shader(&device, &compile(s!("fieldFragment"), s!("ps_4_0"))?)?;
@@ -292,6 +301,8 @@ impl Gpu {
                 pile_fragment,
                 sign_vertex,
                 sign_fragment,
+                garland_vertex,
+                garland_fragment,
                 pumpkin_vertex,
                 pumpkin_fragment,
                 field_fragment,
@@ -529,6 +540,15 @@ impl Surface {
                 blossom: if simulation.blossom() { 1.0 } else { 0.0 },
                 wilt: if simulation.wilts() { 1.0 } else { 0.0 },
                 flake_style: simulation.flake_style as f32,
+                snow_tint: {
+                    let [r, g, b] = simulation.snow_tint();
+                    [r, g, b, 1.0]
+                },
+                garland: {
+                    let (_, blinks, style, color) = simulation.garland();
+                    let tick = if blinks { (simulation.garland_tick() % 4800) as f32 } else { -1.0 };
+                    [style as f32, tick, color as f32, simulation.height() - 1.0]
+                },
             };
 
             // The pumpkins go down before the snow, so the drift they sit in covers their bottoms.
@@ -610,6 +630,15 @@ impl Surface {
                     // Unbound, it can be drawn into again next frame.
                     context.PSSetShaderResources(4, Some(&[None]));
                 }
+            }
+            // The garland hangs in front of the snow falling past it.
+            if simulation.garland().0 {
+                gpu.write(&gpu.uniforms, &uniforms)?;
+                context.IASetInputLayout(None);
+                context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+                context.VSSetShader(&gpu.garland_vertex, None);
+                context.PSSetShader(&gpu.garland_fragment, None);
+                context.Draw(4, 0);
             }
             self.swap_chain.Present(1, DXGI_PRESENT(0)).ok()
         }

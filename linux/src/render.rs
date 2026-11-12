@@ -185,6 +185,7 @@ impl Gpu {
                     "wilt",
                     "glass",
                     "flakeStyle",
+                    "snowTint",
                 ],
             )?;
             let field =
@@ -218,6 +219,7 @@ impl Gpu {
                     "panel",
                     "wilt",
                     "drift",
+                    "snowTint",
                 ],
             )?;
             let sign = program(
@@ -447,6 +449,7 @@ impl Gpu {
                 gl.uniform_1_i32(pile.location("heights"), 0);
                 gl.uniform_4_f32_slice(pile.location("panel"), &panel);
                 gl.uniform_1_f32(pile.location("wilt"), wilt);
+                gl.uniform_3_f32_slice(pile.location("snowTint"), &simulation.snow_tint());
                 for layer in &piles {
                     let count = layer.occluders.len().min(OCCLUDERS);
                     let occluders: Vec<f32> = layer.occluders[..count].iter().flatten().copied().collect();
@@ -560,6 +563,7 @@ impl Gpu {
                 gl.uniform_1_f32(sprite.location("blossom"), blossom);
                 gl.uniform_1_f32(sprite.location("wilt"), wilt);
                 gl.uniform_1_f32(sprite.location("flakeStyle"), simulation.flake_style as f32);
+                gl.uniform_3_f32_slice(sprite.location("snowTint"), &simulation.snow_tint());
                 gl.draw_arrays_instanced(glow::TRIANGLE_STRIP, 0, 4, sprites as i32);
                 if let Some((texture, _)) = field {
                     let program = &self.glass;

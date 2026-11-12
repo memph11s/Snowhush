@@ -16,7 +16,7 @@ use windows::core::{HSTRING, PCWSTR, Result, w};
 
 use snowhush_core::geometry::V2;
 use snowhush_core::halloween::Choice;
-use snowhush_core::simulation::{Borrowed, Mapping, Mode, ScatterPiece, SnowSimulation, Stray};
+use snowhush_core::simulation::{Borrowed, Mapping, Mode, SNOW_TINTS, ScatterPiece, SnowSimulation, Stray};
 
 use crate::desktop::{self, DesktopLayer};
 use crate::halloween;
@@ -44,6 +44,14 @@ pub enum Command {
     Melt(bool),
     Storm(bool),
     FlakeStyle(u8),
+    SnowColor(u8),
+    /// The garland: up or not, blinking or not, its style and its colour.
+    Garland {
+        on: bool,
+        blinks: bool,
+        style: u8,
+        color: u8,
+    },
     SnowOnWindows(bool),
     BehindWindows(bool),
     OverFullScreen(bool),
@@ -153,6 +161,17 @@ fn run_loop(commands: &Receiver<Command>, links: &Links, mut settings: Settings)
                 Command::FlakeStyle(style) => {
                     settings.flake_style = style;
                     screens.iter_mut().for_each(|screen| screen.simulation.flake_style = style);
+                }
+                Command::SnowColor(color) => {
+                    settings.snow_color = color;
+                    screens.iter_mut().for_each(|screen| screen.simulation.set_snow_tint(SNOW_TINTS[color.min(5) as usize]));
+                }
+                Command::Garland { on, blinks, style, color } => {
+                    settings.garland = on;
+                    settings.garland_blinks = blinks;
+                    settings.garland_style = style;
+                    settings.garland_color = color;
+                    screens.iter_mut().for_each(|screen| screen.simulation.set_garland(on, blinks, style, color));
                 }
                 Command::Storm(on) => {
                     settings.storm = on;
@@ -625,6 +644,8 @@ fn new_simulation(monitor: &Monitor, settings: &Settings) -> SnowSimulation {
     simulation.thaws = settings.melt;
     simulation.set_storm(settings.storm);
     simulation.flake_style = settings.flake_style;
+    simulation.set_snow_tint(SNOW_TINTS[settings.snow_color.min(5) as usize]);
+    simulation.set_garland(settings.garland, settings.garland_blinks, settings.garland_style, settings.garland_color);
     simulation.accumulates = settings.accumulates();
     simulation.ground_settles = settings.ground;
     simulation.falling_opacity = settings.opacity as f32 / 100.0;

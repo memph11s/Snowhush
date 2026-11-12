@@ -102,6 +102,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
                 snow.snowmen = Preferences.snowmen
                 snow.garlandStyle = Preferences.garlandStyle
                 snow.flakeStyle = Preferences.flakeStyle
+                snow.garlandColor = Preferences.garlandColor
+                snow.snowColor = Preferences.snowColor
                 snow.modes = Preferences.modes
                 snow.maxFrameRate = Preferences.maxPerformance
                 snow.activityChanged = { [weak self] in self?.updateActivity() }
@@ -298,6 +300,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         case .garlandStyle(let style):
             Preferences.garlandStyle = style
             for snow in screens { snow.garlandStyle = style }
+        case .garlandColor(let color):
+            Preferences.garlandColor = color
+            for snow in screens { snow.garlandColor = color }
+        case .snowColor(let color):
+            Preferences.snowColor = color
+            for snow in screens { snow.snowColor = color }
+        case .reset:
+            resetSettings()
         case .icicles(let on):
             if on != Preferences.icicles { toggleIcicles() }
         case .snowmen(let on):
@@ -317,6 +327,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         case .updates:
             updater.checkForUpdates(nil)
         }
+    }
+
+    /// Asks, then puts every setting back as it was on the first run and starts the app again with them.
+    private func resetSettings() {
+        let alert = NSAlert()
+        alert.messageText = tr("reset.confirm")
+        alert.informativeText = tr("reset.confirm.text")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: tr("reset.do"))
+        alert.addButton(withTitle: tr("cancel"))
+        NSApp.activate(ignoringOtherApps: true)
+        let answer = alert.runModal()
+        guard answer == .alertFirstButtonReturn else { return }
+        Preferences.reset()
+        // A new copy is opened once this one has quit, from the shell, which outlives it.
+        let relaunch = Process()
+        relaunch.executableURL = URL(fileURLWithPath: "/bin/sh")
+        relaunch.arguments = ["-c", "sleep 1; /usr/bin/open \"$0\"", Bundle.main.bundlePath]
+        try? relaunch.run()
+        NSApp.terminate(nil)
     }
 
     private func select(intensity: Double) {

@@ -746,6 +746,19 @@ final class SnowSimulation {
             stirred()
         }
     }
+    /// The colour of the garland's lights: 0 their own, then red, gold, green, blue and cold white.
+    var garlandColor = 0 {
+        didSet {
+            guard garlandColor != oldValue else { return }
+            garlandCache = nil
+            decorChanged = true
+            stirred()
+        }
+    }
+    /// What colour snow is: an index into `NewYear.snowTints`.
+    var snowColor = 0 {
+        didSet { if snowColor != oldValue { restyled = true; stirred() } }
+    }
     /// How the falling flakes look: 0 soft round, 1 six-armed crystals, 2 big ragged flakes.
     var flakeStyle = 0 {
         didSet { if flakeStyle != oldValue { restyled = true; stirred() } }
@@ -1269,6 +1282,8 @@ final class SnowSimulation {
         let tick = max(blinkTick, 0)
         let pattern = (tick / 16) % 3
         let spacing: Float = garlandStyle == 1 ? 13 : garlandStyle == 2 ? 34 : 26
+        // One colour for every light instead of their own.
+        let only: SIMD3<Float>? = garlandColor > 0 ? NewYear.lightColors[min(garlandColor, NewYear.lightColors.count - 1)] : nil
         var k = 0
         var bulbX = spacing / 2
         while bulbX < width {
@@ -1288,7 +1303,7 @@ final class SnowSimulation {
             switch garlandStyle {
             case 1:
                 // Warm white fairy lights, small and close together.
-                let color = SIMD3<Float>(1, 0.8, 0.48)
+                let color = only ?? SIMD3<Float>(1, 0.8, 0.48)
                 let anchor = SIMD2(bulbX, curve.y - 1.5)
                 bulbs.append(DecorSprite(picture: .fairy, anchor: anchor, size: SIMD2(4.2, 4.2), pivot: SIMD2(0.5, 0.5),
                                          tint: SIMD4(color * (lit ? 1 : 0.45) + (lit ? SIMD3(repeating: 0.1) : .zero), 1), glow: lit ? 1 : 0))
@@ -1298,7 +1313,7 @@ final class SnowSimulation {
                 }
             case 2:
                 // Stars, gold in turn with the colours.
-                let color = k % 2 == 0 ? SIMD3<Float>(1, 0.78, 0.25) : NewYear.bulbColors[(k / 2) % NewYear.bulbColors.count]
+                let color = only ?? (k % 2 == 0 ? SIMD3<Float>(1, 0.78, 0.25) : NewYear.bulbColors[(k / 2) % NewYear.bulbColors.count])
                 let anchor = SIMD2(bulbX, curve.y + 1)
                 bulbs.append(DecorSprite(picture: .star, anchor: anchor, size: SIMD2(14, 14), pivot: SIMD2(0.5, 0.97), angle: angle * 0.6,
                                          tint: SIMD4(color * brightness + (lit ? SIMD3(repeating: 0.12) : .zero), 1), glow: lit ? 1 : 0))
@@ -1307,7 +1322,7 @@ final class SnowSimulation {
                                              tint: SIMD4(color * 0.5, 0.06), glow: 1))
                 }
             default:
-                let color = NewYear.bulbColors[k % NewYear.bulbColors.count]
+                let color = only ?? NewYear.bulbColors[k % NewYear.bulbColors.count]
                 let anchor = SIMD2(bulbX, curve.y + 1)
                 bulbs.append(DecorSprite(picture: .bulb, anchor: anchor, size: SIMD2(7, 11.2), pivot: SIMD2(0.5, 1), angle: angle,
                                          tint: SIMD4(color * brightness + (lit ? SIMD3(repeating: 0.12) : .zero), 1), glow: lit ? 1 : 0))

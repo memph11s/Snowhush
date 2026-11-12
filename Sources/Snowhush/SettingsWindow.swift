@@ -6,9 +6,10 @@ enum SettingChange {
     case intensity(Double), opacity(Double)
     case mode(Mode), mixed(Bool), halloween(Bool), flakeStyle(Int)
     case surface(Surfaces, Bool), melt(Bool), deep(Bool), clear
-    case newYear(Bool), garland(Bool), garlandBlinks(Bool), garlandStyle(Int), icicles(Bool), snowmen(Bool), storm(Bool)
+    case newYear(Bool), garland(Bool), garlandBlinks(Bool), garlandStyle(Int), garlandColor(Int), icicles(Bool), snowmen(Bool), storm(Bool)
     case behind(Bool), fullScreen(Bool), screenshots(Bool), performance(Bool)
-    case login(Bool), updates
+    case snowColor(Int)
+    case login(Bool), updates, reset
 }
 
 /// What the settings window shows, read back from the preferences each time it opens or the menu changes something.
@@ -29,6 +30,8 @@ final class SettingsModel: ObservableObject {
     @Published var garland = false
     @Published var garlandBlinks = true
     @Published var garlandStyle = 0
+    @Published var garlandColor = 0
+    @Published var snowColor = 0
     @Published var icicles = false
     @Published var snowmen = true
     @Published var storm = false
@@ -53,6 +56,8 @@ final class SettingsModel: ObservableObject {
         garland = Preferences.garland
         garlandBlinks = Preferences.garlandBlinks
         garlandStyle = Preferences.garlandStyle
+        garlandColor = Preferences.garlandColor
+        snowColor = Preferences.snowColor
         icicles = Preferences.icicles
         snowmen = Preferences.snowmen
         storm = Preferences.storm
@@ -85,7 +90,7 @@ final class SettingsWindowController: NSWindowController {
     let model = SettingsModel()
 
     init() {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 600), styleMask: [.titled, .closable, .miniaturizable],
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 740), styleMask: [.titled, .closable, .miniaturizable],
                               backing: .buffered, defer: true)
         window.title = tr("settings.window")
         window.isReleasedWhenClosed = false
@@ -137,7 +142,7 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 620, height: 600)
+        .frame(width: 620, height: 740)
     }
 }
 
@@ -177,6 +182,13 @@ private struct SnowfallTab: View {
                             model.binding(\.flakeStyle) { .flakeStyle($0) }.wrappedValue = k
                         }
                     }
+                }
+            }
+            Section(tr("snow.color")) {
+                Swatches(colors: NewYear.snowTints.map { Swatch.plain($0 * SIMD3(0.97, 0.98, 1.0)) },
+                         keys: ["snow.color.white", "snow.color.blue", "snow.color.warm", "snow.color.pink", "snow.color.lilac", "snow.color.mint"],
+                         selected: model.snowColor) {
+                    model.binding(\.snowColor) { .snowColor($0) }.wrappedValue = $0
                 }
             }
         }
@@ -225,7 +237,7 @@ private struct NewYearTab: View {
                 Toggle(tr("garland"), isOn: model.binding(\.garland) { .garland($0) })
                 HStack(spacing: 10) {
                     ForEach(0..<3, id: \.self) { k in
-                        PictureCard(image: StylePreviews.garland(k),
+                        PictureCard(image: StylePreviews.garland(k, color: model.garlandColor),
                                     title: tr(["garland.style.bulbs", "garland.style.fairy", "garland.style.stars"][k]),
                                     selected: model.garlandStyle == k) {
                             model.binding(\.garlandStyle) { .garlandStyle($0) }.wrappedValue = k
@@ -234,6 +246,15 @@ private struct NewYearTab: View {
                     }
                 }
                 Toggle(tr("garland.blinks"), isOn: model.binding(\.garlandBlinks) { .garlandBlinks($0) }).disabled(!model.garland)
+                LabeledContent(tr("garland.color")) {
+                    Swatches(colors: [.multicolor] + NewYear.lightColors.dropFirst().map { Swatch.plain($0) },
+                             keys: ["garland.color.multi", "garland.color.red", "garland.color.gold", "garland.color.green",
+                                    "garland.color.blue", "garland.color.white"],
+                             selected: model.garlandColor) {
+                        model.binding(\.garlandColor) { .garlandColor($0) }.wrappedValue = $0
+                        if !model.garland { model.binding(\.garland) { .garland($0) }.wrappedValue = true }
+                    }
+                }
             }
             Section(tr("snowmen")) {
                 FeatureRow(image: StylePreviews.snowman, title: tr("snowmen"), about: tr("snowmen.howto"),
@@ -271,6 +292,9 @@ private struct GeneralTab: View {
                 Button(tr("updates")) { model.apply(.updates) }
             }
             Section {
+                Button(tr("reset"), role: .destructive) { model.apply(.reset) }
+            }
+            Section {
                 Text(tr("settings.doubleclick")).foregroundStyle(.secondary)
                 let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
                 LabeledContent("Snowhush", value: version)
@@ -278,6 +302,49 @@ private struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// A colour to pick: one plain colour, or all the garland's own.
+enum Swatch {
+    case plain(SIMD3<Float>)
+    case multicolor
+
+    var fill: AnyShapeStyle {
+        switch self {
+        case .plain(let c):
+            return AnyShapeStyle(Color(red: Double(c.x), green: Double(c.y), blue: Double(c.z)))
+        case .multicolor:
+            let colors = NewYear.bulbColors.map { Color(red: Double($0.x), green: Double($0.y), blue: Double($0.z)) }
+            return AnyShapeStyle(AngularGradient(colors: colors + [colors[0]], center: .center))
+        }
+    }
+}
+
+/// A row of colours to pick from, named in the tooltip and below the one picked.
+private struct Swatches: View {
+    let colors: [Swatch]
+    let keys: [String]
+    let selected: Int
+    let pick: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(colors.indices, id: \.self) { k in
+                Button { pick(k) } label: {
+                    Circle()
+                        .fill(colors[k].fill)
+                        .frame(width: 24, height: 24)
+                        .overlay(Circle().strokeBorder(Color.black.opacity(0.15), lineWidth: 1))
+                        .padding(3)
+                        .overlay(Circle().strokeBorder(selected == k ? Color.accentColor : Color.clear, lineWidth: 2.5))
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help(tr(keys[k]))
+            }
+            Text(tr(keys[min(max(selected, 0), keys.count - 1)])).foregroundStyle(.secondary).frame(minWidth: 90, alignment: .leading)
+        }
     }
 }
 
@@ -383,9 +450,9 @@ enum StylePreviews {
         }
     }
 
-    static func garland(_ style: Int) -> NSImage {
+    static func garland(_ style: Int, color only: Int = 0) -> NSImage {
         let size = NSSize(width: 150, height: 64)
-        return cached("garland-\(style)", size: size) { context in
+        return cached("garland-\(style)-\(only)", size: size) { context in
             let wire = CGMutablePath()
             wire.move(to: CGPoint(x: 0, y: 52))
             wire.addQuadCurve(to: CGPoint(x: 75, y: 52), control: CGPoint(x: 37, y: 30))
@@ -402,7 +469,11 @@ enum StylePreviews {
                 let x = (CGFloat(k) + 0.5) / CGFloat(count) * 150
                 let u = x.truncatingRemainder(dividingBy: 75) / 75
                 let y = 52 - 22 * 2 * u * (1 - u)
-                let color = style == 1 ? warm : style == 2 ? (k % 2 == 0 ? gold : colors[(k / 2) % colors.count]) : colors[k % colors.count]
+                var color = style == 1 ? warm : style == 2 ? (k % 2 == 0 ? gold : colors[(k / 2) % colors.count]) : colors[k % colors.count]
+                if only > 0, only < NewYear.lightColors.count {
+                    let c = NewYear.lightColors[only]
+                    color = NSColor(srgbRed: CGFloat(c.x), green: CGFloat(c.y), blue: CGFloat(c.z), alpha: 1)
+                }
                 let halo = style == 1 ? 9.0 : 16.0
                 context.saveGState()
                 let glow = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB),

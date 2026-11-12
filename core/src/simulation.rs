@@ -422,6 +422,9 @@ struct Air {
     storm_direction: f32,
 }
 
+/// The colours snow can be tinted, as what its white is multiplied by: white, blue, warm, pink, lilac and mint.
+pub const SNOW_TINTS: [[f32; 3]; 6] = [[1.0, 1.0, 1.0], [0.78, 0.9, 1.0], [1.0, 0.93, 0.82], [1.0, 0.82, 0.9], [0.88, 0.84, 1.0], [0.82, 1.0, 0.92]];
+
 pub struct SnowSimulation {
     width: f32,
     height: f32,
@@ -435,6 +438,17 @@ pub struct SnowSimulation {
     storm: bool,
     /// How snowflakes are drawn: 0 soft and round, 1 crystals, 2 big ragged flakes.
     pub flake_style: u8,
+    /// A garland strung along the top of the screen, its lights blinking in turn unless `garland_blinks` is off.
+    garland: bool,
+    garland_blinks: bool,
+    /// What the garland is strung with: 0 coloured bulbs, 1 warm fairy lights, 2 stars.
+    garland_style: u8,
+    /// The colour of its lights: 0 its own, 1 red, 2 gold, 3 green, 4 blue, 5 cold white.
+    garland_color: u8,
+    /// Which blink the garland is at: two a second.
+    garland_tick: i64,
+    /// What white snow is multiplied by: a tint for the snow, leaving leaves, petals and rain as they are.
+    snow_tint: [f32; 3],
     /// Whether snow and leaves settle along the bottom of the screen; rain splashes there either way.
     pub ground_settles: bool,
     /// How opaque snow, leaves and rain are while they fall, from the sky or off a window; once settled they show in full.
@@ -497,6 +511,12 @@ impl SnowSimulation {
             thaws: false,
             storm: false,
             flake_style: 0,
+            garland: false,
+            garland_blinks: true,
+            garland_style: 0,
+            garland_color: 0,
+            garland_tick: 0,
+            snow_tint: [1.0; 3],
             accumulates: true,
             ground_settles: true,
             falling_opacity: 1.0,
@@ -702,8 +722,38 @@ impl SnowSimulation {
         self.storm = on;
     }
 
+    /// Strings the garland along the top of the screen, or takes it down.
+    pub fn set_garland(&mut self, on: bool, blinks: bool, style: u8, color: u8) {
+        self.garland = on;
+        self.garland_blinks = blinks;
+        self.garland_style = style.min(2);
+        self.garland_color = color.min(5);
+        self.restyled = true;
+    }
+
+    /// Whether the garland is up, and what it looks like: on, blinks, style, colour.
+    pub fn garland(&self) -> (bool, bool, u8, u8) {
+        (self.garland, self.garland_blinks, self.garland_style, self.garland_color)
+    }
+
+    /// Which blink the garland's lights are at; it only moves on while they blink.
+    pub fn garland_tick(&self) -> i64 {
+        if self.garland_blinks { self.garland_tick } else { 0 }
+    }
+
+    /// Tints the snow: white is multiplied by `tint`.
+    pub fn set_snow_tint(&mut self, tint: [f32; 3]) {
+        self.snow_tint = tint;
+        self.restyled = true;
+    }
+
+    pub fn snow_tint(&self) -> [f32; 3] {
+        self.snow_tint
+    }
+
     pub fn is_empty(&self) -> bool {
         self.intensity <= 0.0
+            && !self.garland
             && !self.storm
             && self.air.storm_wind == 0.0
             && !self.haunting.on
@@ -802,6 +852,13 @@ impl SnowSimulation {
 
         self.release_scattered();
         self.tend_storm(dt);
+        if self.garland && self.garland_blinks {
+            let tick = (self.air.clock * 2.0) as i64;
+            if tick != self.garland_tick {
+                self.garland_tick = tick;
+                self.restyled = true;
+            }
+        }
         let wind = self.air.slide_wind;
         self.air.slide_wind = if wind.abs() < 1.0 { 0.0 } else { wind * (-dt / SLIDE_CALM).exp() };
         self.air.leaf_budget = self.spare_leaves();
@@ -852,7 +909,9 @@ impl SnowSimulation {
             || air.gust.is_some()
             || self.haunting.pushing(air.clock);
         // The steady trickle off window corners is a few tiny grains at a time; they read fine at the calm rate.
-        let flying = air.grains.len() > 24 || air.clock < self.scattered_until || air.slide_wind.abs() > 20.0
+        let flying = air.grains.len() > 24
+            || air.clock < self.scattered_until
+            || air.slide_wind.abs() > 20.0
             || (air.storm_wind.abs() > 110.0 && !air.flakes.is_empty());
         self.pace = if pushed {
             Pace::Interactive

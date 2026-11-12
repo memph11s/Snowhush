@@ -28,6 +28,8 @@ struct Uniforms {
     var pumpkins = (SIMD4<Float>(0, 0, 0, 0), SIMD4<Float>(0, 0, 0, 0), SIMD4<Float>(0, 0, 0, 0))
     /// How the falling flakes look: 0 soft round, 1 crystals, 2 big ragged flakes.
     var flakeStyle: Float = 0
+    /// What white snow is multiplied by.
+    var snowTint = SIMD4<Float>(1, 1, 1, 1)
 }
 
 struct PumpkinUniforms {
@@ -288,6 +290,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         uniforms.blossom = simulation.leafy && simulation.modes.contains(.blossom) ? 1 : 0
         uniforms.wilt = simulation.thaws && simulation.accumulates ? 1 : 0
         uniforms.flakeStyle = Float(simulation.flakeStyle)
+        uniforms.snowTint = SIMD4(NewYear.snowTints[min(max(simulation.snowColor, 0), NewYear.snowTints.count - 1)], 1)
         let pumpkins = simulation.pumpkins
         let candles = pumpkins.prefix(3).map { pumpkin in
             let height = pumpkin.width * HalloweenPumpkin.aspect

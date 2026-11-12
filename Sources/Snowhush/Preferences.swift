@@ -47,6 +47,8 @@ enum Preferences {
     private static let snowmenKey = "snowmen"
     private static let garlandStyleKey = "garlandStyle"
     private static let flakeStyleKey = "flakeStyle"
+    private static let garlandColorKey = "garlandColor"
+    private static let snowColorKey = "snowColor"
 
     static func registerDefaults() {
         let calm = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -74,6 +76,8 @@ enum Preferences {
             snowmenKey: true,
             garlandStyleKey: 0,
             flakeStyleKey: 0,
+            garlandColorKey: 0,
+            snowColorKey: 0,
         ])
         if defaults.object(forKey: intensityKey) == nil, let stop = defaults.object(forKey: snowfallKey) as? Int {
             defaults.set([0, 0.25, 0.5, 0.75, 0.5][min(max(stop, 0), 4)], forKey: intensityKey)
@@ -121,6 +125,16 @@ enum Preferences {
     static var meltSnow: Bool {
         get { defaults.bool(forKey: meltSnowKey) }
         set { defaults.set(newValue, forKey: meltSnowKey) }
+    }
+
+    /// Puts every setting back as it was on the first run, keeping only that the welcome was seen and when the app was
+    /// installed.
+    static func reset() {
+        let installedAt = defaults.object(forKey: installedAtKey)
+        if let domain = Bundle.main.bundleIdentifier { defaults.removePersistentDomain(forName: domain) }
+        defaults.set(true, forKey: welcomedKey)
+        if let installedAt { defaults.set(installedAt, forKey: installedAtKey) }
+        defaults.synchronize()
     }
 
     static var welcomed: Bool {
@@ -189,6 +203,18 @@ enum Preferences {
     static var garlandStyle: Int {
         get { min(max(defaults.integer(forKey: garlandStyleKey), 0), 2) }
         set { defaults.set(newValue, forKey: garlandStyleKey) }
+    }
+
+    /// The colour of the garland's lights: 0 their own, then red, gold, green, blue and cold white.
+    static var garlandColor: Int {
+        get { min(max(defaults.integer(forKey: garlandColorKey), 0), 5) }
+        set { defaults.set(newValue, forKey: garlandColorKey) }
+    }
+
+    /// What colour the snow is: white, blue, warm, pink, lilac or mint.
+    static var snowColor: Int {
+        get { min(max(defaults.integer(forKey: snowColorKey), 0), 5) }
+        set { defaults.set(newValue, forKey: snowColorKey) }
     }
 
     /// How the flakes look: 0 soft round, 1 crystals, 2 big flakes.

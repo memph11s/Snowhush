@@ -49,6 +49,13 @@ pub struct Settings {
     pub storm: bool,
     /// How snowflakes are drawn: 0 soft, 1 crystals, 2 big flakes.
     pub flake_style: u8,
+    /// What colour snow is: an index into `SNOW_TINTS`.
+    pub snow_color: u8,
+    /// A garland along the top of the screen, blinking or not, in one of three styles and six colours.
+    pub garland: bool,
+    pub garland_blinks: bool,
+    pub garland_style: u8,
+    pub garland_color: u8,
 }
 
 impl Settings {
@@ -92,6 +99,11 @@ impl Settings {
             opacity: read(w!("fallingOpacity")).map_or(100, |v| v.clamp(10, 100)),
             storm: read(w!("storm")).is_some_and(|v| v != 0),
             flake_style: read(w!("flakeStyle")).map_or(0, |v| v.min(2) as u8),
+            snow_color: read(w!("snowColor")).map_or(0, |v| v.min(5) as u8),
+            garland: read(w!("garland")).is_some_and(|v| v != 0),
+            garland_blinks: read(w!("garlandBlinks")).is_none_or(|v| v != 0),
+            garland_style: read(w!("garlandStyle")).map_or(0, |v| v.min(2) as u8),
+            garland_color: read(w!("garlandColor")).map_or(0, |v| v.min(5) as u8),
             mode,
             mixed: read(w!("mixed")).is_some_and(|v| v != 0),
             mix: mix_of(read(w!("mix0")), read(w!("mix1")), mode),
@@ -121,6 +133,11 @@ impl Settings {
         write(w!("fallingOpacity"), self.opacity);
         write(w!("storm"), self.storm as u32);
         write(w!("flakeStyle"), self.flake_style as u32);
+        write(w!("snowColor"), self.snow_color as u32);
+        write(w!("garland"), self.garland as u32);
+        write(w!("garlandBlinks"), self.garland_blinks as u32);
+        write(w!("garlandStyle"), self.garland_style as u32);
+        write(w!("garlandColor"), self.garland_color as u32);
     }
 
     /// The kinds falling: the two mixed, or the one picked.

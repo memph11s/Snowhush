@@ -27,6 +27,8 @@ uniform vec4 panel;
 uniform float wilt;
 // How far along its window the heap has drifted since it came, as the window's left edge was dragged under it.
 uniform float drift;
+// What white snow is multiplied by.
+uniform vec3 snowTint;
 
 in vec2 vLocal;
 
@@ -205,6 +207,7 @@ void main() {
             float twinkle = pow(clamp(sin(time * (0.6 + seed * 1.8) + seed * 90.0), 0.0, 1.0), 28.0);
             color = mix(color, vec3(1.0), twinkle * exp(-depth / 7.0));
         }
+        color *= snowTint;
     }
     // Where leaves are, a leaf shows where one lies; mostly leaves, the gaps between them are the heap's shadow too.
     float leafy = 0.0;

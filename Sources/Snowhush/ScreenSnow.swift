@@ -114,6 +114,14 @@ final class ScreenSnow {
         get { simulation.garlandStyle }
         set { simulation.garlandStyle = newValue }
     }
+    var garlandColor: Int {
+        get { simulation.garlandColor }
+        set { simulation.garlandColor = newValue }
+    }
+    var snowColor: Int {
+        get { simulation.snowColor }
+        set { simulation.snowColor = newValue }
+    }
     var flakeStyle: Int {
         get { simulation.flakeStyle }
         set { simulation.flakeStyle = newValue }

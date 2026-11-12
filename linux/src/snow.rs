@@ -21,7 +21,7 @@ use zbus::blocking::Connection as Bus;
 
 use snowhush_core::geometry::V2;
 use snowhush_core::halloween::{Choice, Today};
-use snowhush_core::simulation::{Borrowed, Mapping, Mode, SnowSimulation, Stray, WindowId};
+use snowhush_core::simulation::{Borrowed, Mapping, Mode, SNOW_TINTS, SnowSimulation, Stray, WindowId};
 
 use crate::chores;
 use crate::kwin;
@@ -44,6 +44,7 @@ pub enum Command {
     Melt(bool),
     Storm(bool),
     FlakeStyle(u8),
+    SnowColor(u8),
     SnowOnWindows(bool),
     BehindWindows(bool),
     OverFullScreen(bool),
@@ -267,6 +268,10 @@ impl App {
                     screen.simulation.accumulates = accumulates;
                     if windows { screen.rewatch() } else { screen.drop_window_snow() }
                 });
+            }
+            Command::SnowColor(color) => {
+                self.settings.snow_color = color;
+                self.screens.iter_mut().for_each(|screen| screen.simulation.set_snow_tint(SNOW_TINTS[color.min(5) as usize]));
             }
             Command::FlakeStyle(style) => {
                 self.settings.flake_style = style;
@@ -650,6 +655,7 @@ fn new_simulation(bounds: &Area, settings: &Settings, budget: PowerBudget) -> Sn
     simulation.thaws = settings.melt;
     simulation.set_storm(settings.storm);
     simulation.flake_style = settings.flake_style;
+    simulation.set_snow_tint(SNOW_TINTS[settings.snow_color.min(5) as usize]);
     simulation.accumulates = settings.accumulates();
     simulation.ground_settles = settings.ground;
     simulation.falling_opacity = settings.opacity as f32 / 100.0;

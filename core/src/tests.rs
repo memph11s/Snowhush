@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::geometry::{Rect, V2};
 use crate::layer::SnowLayer;
-use crate::simulation::{Mapping, Mode, Pace, ScatterPiece, SnowSimulation, Sprite, WindowSurface};
+use crate::simulation::{Mapping, Mode, Pace, SNOW_TINTS, ScatterPiece, SnowSimulation, Sprite, WindowSurface};
 
 const DT: f32 = 1.0 / 60.0;
 const AWAY: V2 = V2::new(-10_000.0, -10_000.0);
@@ -1259,4 +1259,21 @@ fn a_storm_drives_the_snow_sideways_and_dies_down_once_off() {
     let after = mean_drift(&simulation).abs();
     assert!(after < stormy * 0.5, "storm {stormy}, after {after}");
     assert_finite(&simulation);
+}
+
+#[test]
+fn a_blinking_garland_keeps_the_screen_drawn_and_a_steady_one_holds_its_blink() {
+    let mut simulation = SnowSimulation::new(1200.0, 800.0, 0.0);
+    simulation.set_intensity(0.0);
+    simulation.set_garland(true, true, 2, 9);
+    assert!(!simulation.is_empty());
+    assert_eq!(simulation.garland(), (true, true, 2, 5));
+    run(&mut simulation, 2.0, AWAY);
+    let tick = simulation.garland_tick();
+    assert!(tick >= 3, "tick {tick}");
+    simulation.set_garland(true, false, 0, 0);
+    run(&mut simulation, 2.0, AWAY);
+    assert_eq!(simulation.garland_tick(), 0);
+    simulation.set_snow_tint(SNOW_TINTS[1]);
+    assert_eq!(simulation.snow_tint(), SNOW_TINTS[1]);
 }
