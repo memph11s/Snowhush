@@ -1,14 +1,15 @@
 #!/bin/zsh
-# Builds, signs, notarizes and publishes a release on GitHub.
-# The release carries Snowhush.dmg, which the site's Download button and Sparkle both fetch,
-# appcast.xml, which the app reads from the latest release to find updates,
-# and Snowhush-Setup.exe for Windows, whose app looks for it on the latest release to find updates.
-# Once it is published, GitHub Actions adds the Linux packages to it: .github/workflows/release.yml.
+# Builds and publishes a release on GitHub.
+# The release carries Snowhush.dmg, which the site's Download button and Sparkle both fetch, and
+# appcast.xml, which the app reads from the latest release to find updates.
+# Once it is published, GitHub Actions adds Snowhush-Setup.exe for Windows, whose app looks for it on the latest
+# release to find updates, and the Linux packages: .github/workflows/release.yml.
 # When the Homebrew tap repository exists (HOMEBREW_TAP, default memph11s/homebrew-tap), its cask follows along.
 #
 # Usage: ./release.sh <version> [notes]
-# Needs: a "Developer ID Application" identity, a notarytool keychain profile (NOTARY_PROFILE, default "snowhush"),
-# the Sparkle EdDSA key in the login keychain, gh signed in, and cargo-xwin for Windows.
+# Needs: the Sparkle EdDSA key in the login keychain and gh signed in.
+# With a "Developer ID Application" identity and a notarytool keychain profile (NOTARY_PROFILE, default "snowhush")
+# the app is signed and notarized; without them it is signed ad hoc, and macOS asks to confirm its first launch.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -23,11 +24,13 @@ dmgbuild=.build/dmgbuild/bin/dmgbuild
 plist=Resources/Info.plist
 
 export IDENTITY=${IDENTITY:-$(security find-identity -v -p codesigning | awk -F'"' '/Developer ID Application/ { print $2; exit }')}
-[[ -n "$IDENTITY" ]] || { echo "No Developer ID Application identity in the keychain." >&2; exit 1; }
 [[ -z "$(git status --porcelain)" ]] || { echo "Commit or stash your changes first." >&2; exit 1; }
-xcrun notarytool history --keychain-profile "$profile" >/dev/null 2>&1 \
-    || { echo "No notarytool profile \"$profile\". Create it with: xcrun notarytool store-credentials $profile" >&2; exit 1; }
-command -v cargo-xwin >/dev/null || { echo "The Windows build needs cargo-xwin: cargo install cargo-xwin" >&2; exit 1; }
+if [[ -n "$IDENTITY" ]]; then
+    xcrun notarytool history --keychain-profile "$profile" >/dev/null 2>&1 \
+        || { echo "No notarytool profile \"$profile\". Create it with: xcrun notarytool store-credentials $profile" >&2; exit 1; }
+else
+    echo "No Developer ID Application identity: the app is signed ad hoc and not notarized."
+fi
 
 if [[ ! -x "$dmgbuild" ]]; then
     python3 -m venv .build/dmgbuild
@@ -50,7 +53,7 @@ fi
 cargo_toml=windows/Cargo.toml
 if [[ "$(sed -n 's/^version = "\(.*\)"$/\1/p' "$cargo_toml" | head -1)" != "$version" ]]; then
     sed -i '' "1,/^version = /s/^version = \".*\"/version = \"$version\"/" "$cargo_toml"
-    (cd windows && cargo update --workspace --offline -q)
+    perl -0pi -e "s/(name = \"snowhush\"\nversion = )\"[^\"]*\"/\${1}\"$version\"/" windows/Cargo.lock
     bumped+=("$cargo_toml" windows/Cargo.lock)
 fi
 if [[ "$(sed -n 's/^version = "\(.*\)"$/\1/p' linux/Cargo.toml | head -1)" != "$version" ]]; then
@@ -72,11 +75,13 @@ notarize() {
     xcrun notarytool submit "$1" --keychain-profile "$profile" --wait
 }
 
-echo "Notarizing the app…"
-ditto -c -k --keepParent "$app" "$dist/Snowhush.zip"
-notarize "$dist/Snowhush.zip"
-xcrun stapler staple "$app"
-rm "$dist/Snowhush.zip"
+if [[ -n "$IDENTITY" ]]; then
+    echo "Notarizing the app…"
+    ditto -c -k --keepParent "$app" "$dist/Snowhush.zip"
+    notarize "$dist/Snowhush.zip"
+    xcrun stapler staple "$app"
+    rm "$dist/Snowhush.zip"
+fi
 
 echo "Packing the disk image…"
 artwork=$(mktemp -d)
@@ -85,12 +90,11 @@ swift scripts/make-dmg-background.swift "$artwork/background@2x.png" 2 >/dev/nul
 tiffutil -cathidpicheck "$artwork/background.png" "$artwork/background@2x.png" -out "$artwork/background.tiff" 2>/dev/null
 "$dmgbuild" -s scripts/dmg-settings.py -D app="$app" -D background="$artwork/background.tiff" Snowhush "$dist/Snowhush.dmg" 2>/dev/null
 rm -rf "$artwork"
-codesign --force --timestamp --sign "$IDENTITY" "$dist/Snowhush.dmg"
-notarize "$dist/Snowhush.dmg"
-xcrun stapler staple "$dist/Snowhush.dmg"
-
-echo "Building for Windows…"
-windows/build.sh "$dist" >/dev/null
+if [[ -n "$IDENTITY" ]]; then
+    codesign --force --timestamp --sign "$IDENTITY" "$dist/Snowhush.dmg"
+    notarize "$dist/Snowhush.dmg"
+    xcrun stapler staple "$dist/Snowhush.dmg"
+fi
 
 echo "Writing the appcast…"
 cp "$dist/Snowhush.dmg" "$dist/appcast/Snowhush.dmg"
@@ -104,10 +108,10 @@ print -r -- "<p>$notes</p>" > "$dist/appcast/Snowhush.html"
 echo "Publishing v$version…"
 git push -q origin HEAD
 # The tag goes on the commit just built, whichever branch it is on.
-gh release create "v$version" "$dist/Snowhush.dmg" "$dist/appcast/appcast.xml" "$dist/Snowhush-Setup.exe" \
+gh release create "v$version" "$dist/Snowhush.dmg" "$dist/appcast/appcast.xml" \
     --repo "$repository" --target "$(git rev-parse HEAD)" --title "Snowhush $version" --notes "$notes"
 echo "Released https://github.com/$repository/releases/tag/v$version"
-echo "GitHub Actions is adding the Linux packages; once they are there, linux/packaging/aur/update.sh $version brings the AUR package along."
+echo "GitHub Actions is adding the Windows installer and the Linux packages; once they are there, linux/packaging/aur/update.sh $version brings the AUR package along."
 
 tap_repository=${HOMEBREW_TAP:-memph11s/homebrew-tap}
 if gh repo view "$tap_repository" >/dev/null 2>&1; then

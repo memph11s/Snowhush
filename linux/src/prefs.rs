@@ -65,7 +65,7 @@ impl Settings {
             melt: read("meltSnow").is_none_or(|v| v != 0),
             snow_on_windows: settled && read("snowOnWindows").is_none_or(|v| v != 0),
             behind_windows: read("behindWindows").is_some_and(|v| v != 0),
-            over_full_screen: read("showOverFullScreen").is_some_and(|v| v != 0),
+            over_full_screen: read("showOverFullScreen").is_none_or(|v| v != 0),
             show_in_screenshots: read("showInScreenshots").is_some_and(|v| v != 0),
             installed_at: stamped.unwrap_or_else(|| if text.is_empty() { now() } else { 0 }),
             halloween: Choice { on: read("halloweenOn").is_some_and(|v| v != 0), skipped: read("halloweenSkipped").unwrap_or(0) },

@@ -688,6 +688,14 @@ final class SnowSimulation {
             stirred()
         }
     }
+    /// Whether the bulbs blink in turn; otherwise they all stay lit.
+    var garlandBlinks = true {
+        didSet {
+            guard garlandBlinks != oldValue else { return }
+            decorChanged = true
+            stirred()
+        }
+    }
     /// Icicles growing under the windows' bottom edges, now and then letting a drop fall.
     var icicles = false {
         didSet {
@@ -1104,7 +1112,7 @@ final class SnowSimulation {
 
     private func tendDecor(dt: Float) {
         if newYear { settleOrnaments(dt: dt) }
-        if garland {
+        if garland && garlandBlinks {
             let tick = Int(clock * 2)
             if tick != blinkTick {
                 blinkTick = tick
@@ -1189,7 +1197,8 @@ final class SnowSimulation {
             }
         }
         if garland {
-            let key = SIMD3(Float(blinkTick), width, menuBar)
+            // A garland that doesn't blink stays as it is: no tick, nothing to draw anew.
+            let key = SIMD3(garlandBlinks ? Float(blinkTick) : -2, width, menuBar)
             if garlandCache?.key != key { garlandCache = (key, garlandSprites()) }
             sprites += garlandCache?.sprites ?? []
         }
@@ -1227,10 +1236,14 @@ final class SnowSimulation {
         while bulbX < width {
             let curve = garlandCurve(bulbX)
             let lit: Bool
-            switch pattern {
+            if !garlandBlinks {
+                lit = true
+            } else {
+                switch pattern {
             case 0: lit = (k + tick) % 2 == 0
             case 1: lit = (k - tick % 4 + 4) % 4 != 0
             default: lit = NewYear.noise(UInt32(k), UInt32(tick)) > 0.3
+            }
             }
             let color = NewYear.bulbColors[k % NewYear.bulbColors.count]
             let anchor = SIMD2(bulbX, curve.y + 1)

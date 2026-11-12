@@ -76,7 +76,7 @@ impl Settings {
             melt: read(w!("meltSnow")).is_none_or(|v| v != 0),
             snow_on_windows: settled && read(w!("snowOnWindows")).is_none_or(|v| v != 0),
             behind_windows: read(w!("behindWindows")).is_some_and(|v| v != 0),
-            over_full_screen: read(w!("showOverFullScreen")).is_some_and(|v| v != 0),
+            over_full_screen: read(w!("showOverFullScreen")).is_none_or(|v| v != 0),
             behind_taskbar: read(w!("behindTaskbar")).is_some_and(|v| v != 0),
             show_in_screenshots: read(w!("showInScreenshots")).is_some_and(|v| v != 0),
             deep_interaction: read(w!("deepInteraction")).is_some_and(|v| v != 0),

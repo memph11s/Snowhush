@@ -42,6 +42,7 @@ enum Preferences {
     private static let newYearKey = "newYear"
     private static let stormKey = "storm"
     private static let garlandKey = "garland"
+    private static let garlandBlinksKey = "garlandBlinks"
     private static let iciclesKey = "icicles"
 
     static func registerDefaults() {
@@ -49,7 +50,7 @@ enum Preferences {
         defaults.register(defaults: [
             intensityKey: calm ? 0.25 : 0.35,
             behindWindowsKey: false,
-            showOverFullScreenKey: false,
+            showOverFullScreenKey: true,
             meltSnowKey: true,
             groundKey: true,
             dockKey: true,
@@ -65,6 +66,7 @@ enum Preferences {
             newYearKey: false,
             stormKey: false,
             garlandKey: false,
+            garlandBlinksKey: true,
             iciclesKey: false,
         ])
         if defaults.object(forKey: intensityKey) == nil, let stop = defaults.object(forKey: snowfallKey) as? Int {
@@ -157,6 +159,12 @@ enum Preferences {
     static var garland: Bool {
         get { defaults.bool(forKey: garlandKey) }
         set { defaults.set(newValue, forKey: garlandKey) }
+    }
+
+    /// Whether the garland's bulbs blink in turn or all stay lit.
+    static var garlandBlinks: Bool {
+        get { defaults.bool(forKey: garlandBlinksKey) }
+        set { defaults.set(newValue, forKey: garlandBlinksKey) }
     }
 
     /// Icicles growing under the windows' bottom edges.

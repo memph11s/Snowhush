@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
     private var newYearItem: NSMenuItem!
     private var stormItem: NSMenuItem!
     private var garlandItem: NSMenuItem!
+    private var garlandBlinksItem: NSMenuItem!
     private var iciclesItem: NSMenuItem!
     private var mixedItem: NSMenuItem!
     private var modeItems: [(item: NSMenuItem, mode: Mode)] = []
@@ -105,6 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
                 snow.newYear = Preferences.newYear
                 snow.storm = Preferences.storm
                 snow.garland = Preferences.garland
+                snow.garlandBlinks = Preferences.garlandBlinks
                 snow.icicles = Preferences.icicles
                 snow.modes = Preferences.modes
                 snow.maxFrameRate = Preferences.maxPerformance
@@ -204,11 +206,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         newYear.autoenablesItems = false
         newYearItem = toggle(tr("newyear.decor"), #selector(toggleNewYear), to: newYear)
         garlandItem = toggle(tr("garland"), #selector(toggleGarland), to: newYear)
+        garlandBlinksItem = toggle(tr("garland.blinks"), #selector(toggleGarlandBlinks), to: newYear)
         iciclesItem = toggle(tr("icicles"), #selector(toggleIcicles), to: newYear)
         newYear.addItem(.separator())
         stormItem = toggle(tr("storm"), #selector(toggleStorm), to: newYear)
         // Several are wanted at once, so the menu stays open between them.
-        for item in [newYearItem, garlandItem, iciclesItem, stormItem] { (item?.view as? MenuToggle)?.staysOpen = { true } }
+        for item in [newYearItem, garlandItem, garlandBlinksItem, iciclesItem, stormItem] { (item?.view as? MenuToggle)?.staysOpen = { true } }
         menu.addItem(withTitle: tr("newyear"), action: nil, keyEquivalent: "").submenu = newYear
         clearItem = add(tr("clear.snow"), #selector(clearSnow), to: menu)
         menu.addItem(.separator())
@@ -285,6 +288,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         newYearItem.state = Preferences.newYear ? .on : .off
         stormItem.state = Preferences.storm ? .on : .off
         garlandItem.state = Preferences.garland ? .on : .off
+        garlandBlinksItem.state = Preferences.garlandBlinks ? .on : .off
+        garlandBlinksItem.isEnabled = Preferences.garland
         iciclesItem.state = Preferences.icicles ? .on : .off
         maxPerformanceItem.state = Preferences.maxPerformance ? .on : .off
         behindWindowsItem.state = behindWindows ? .on : .off
@@ -415,6 +420,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
     @objc private func toggleGarland() {
         Preferences.garland.toggle()
         for snow in screens { snow.garland = Preferences.garland }
+    }
+
+    @objc private func toggleGarlandBlinks() {
+        Preferences.garlandBlinks.toggle()
+        for snow in screens { snow.garlandBlinks = Preferences.garlandBlinks }
     }
 
     @objc private func toggleIcicles() {

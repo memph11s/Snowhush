@@ -1,20 +1,37 @@
-name: Linux packages
+name: Release packages
 
-# Builds the Linux app's packages and adds them to a release: on its own once release.sh publishes one, or by
-# hand for a release that has none yet, built from the branch the run is started on.
+# Builds the Windows installer and the Linux packages and adds them to a release: on its own once release.sh
+# publishes one, or by hand for a release that has none yet, built from the branch the run is started on.
 on:
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: The release to add them to, such as v0.6.0
+        description: The release to add them to, such as v1.0.0
         required: true
 
 permissions:
   contents: write
 
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
 jobs:
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      # The installer carries the app, so the app is built first and handed to it.
+      - run: cargo build --locked --release --bin Snowhush --manifest-path windows/Cargo.toml
+      - run: cargo build --locked --release --bin Snowhush-Setup --features setup --manifest-path windows/Cargo.toml
+        env:
+          SNOWHUSH_APP: ${{ github.workspace }}\windows\target\release\Snowhush.exe
+      - run: gh release upload "$env:TAG" windows/target/release/Snowhush-Setup.exe --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   linux:
     name: Linux packages
     # An older glibc than ubuntu-latest has, so the app runs on older distributions too.
@@ -27,4 +44,3 @@ jobs:
       - run: gh release upload "$TAG" dist/* --clobber
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name || inputs.tag }}

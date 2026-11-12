@@ -98,6 +98,10 @@ final class ScreenSnow {
         get { simulation.garland }
         set { simulation.garland = newValue }
     }
+    var garlandBlinks: Bool {
+        get { simulation.garlandBlinks }
+        set { simulation.garlandBlinks = newValue }
+    }
     var icicles: Bool {
         get { simulation.icicles }
         set { simulation.icicles = newValue }
