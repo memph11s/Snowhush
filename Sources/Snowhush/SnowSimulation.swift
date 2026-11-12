@@ -1069,8 +1069,11 @@ final class SnowSimulation {
 
     // MARK: - New Year
 
+    /// The most powder the storm keeps in the air off the crests at once.
+    private let stormGrains = 400
+
     /// How hard the storm blows, from 0 in calm air to 1 at its strongest.
-    private var stormShare: Float { min(1, abs(stormWind) / 170) }
+    private var stormShare: Float { min(1, abs(stormWind) / 140) }
 
     /// The storm's gusts, from 0 to 1.
     private var stormGusts: Float {
@@ -1085,7 +1088,7 @@ final class SnowSimulation {
 
     /// The storm comes up over a few seconds, blows in gusts and dies down as slowly once it is switched off.
     private func tendStorm(dt: Float) {
-        let target = storm ? stormDirection * (95 + 95 * stormGusts) : 0
+        let target = storm ? stormDirection * (70 + 70 * stormGusts) : 0
         stormWind += (target - stormWind) * min(1, dt * (storm ? 0.9 : 0.6))
         if !storm && abs(stormWind) < 0.5 { stormWind = 0 }
     }
@@ -3530,11 +3533,16 @@ final class SnowSimulation {
     /// The wind of a sliding Space skims the drifts, most off the crests that stand above the snow around them:
     /// a little powder flies a short way downwind and settles again.
     private func skim(dt: Float) {
-        let share = max(abs(slideWind) / slideWindMax, stormShare * stormShare * 0.3 * (0.6 + 0.4 * stormGusts))
+        let sliding = abs(slideWind) / slideWindMax
+        // The storm only lifts the crests, a little at a time, and never more powder than is in the air already: it
+        // blows for as long as it is on, and would carry the whole drift off the screen.
+        let stormy = sliding < 0.1 && stormShare > 0.3
+        let share = stormy ? stormShare * (0.5 + 0.5 * stormGusts) : sliding
         guard share > 0.1 else { return }
+        if stormy && grains.count > stormGrains { return }
         // Of leaves it lifts some of those lying on top, never the mass under them.
         let shown = markShown()
-        for k in lying.indices.reversed() where random.next() < share * dt {
+        for k in lying.indices.reversed() where random.next() < share * dt * (stormy ? 0.05 : 1) {
             let leaf = lying[k]
             guard leaf.layer.shown == shown, let i = leaf.layer.index(at: leaf.layer.heapX + leaf.x),
                   leaf.layer.visible[i], leaf.layer.surface(i) - leaf.layer.base.y < leaf.top + 2 else { continue }
@@ -3548,7 +3556,9 @@ final class SnowSimulation {
                 let snow = height - layer.leaves[i]
                 guard snow > 1.5 else { continue }
                 let around = (layer.heights[max(i - 12, 0)] + layer.heights[min(i + 12, count - 1)]) / 2
-                let loss = min(snow * 0.2, (0.2 + max(0, height - around) * 1.5) * share * dt)
+                let crest = max(0, height - around - 1.5)
+                if stormy && (crest <= 0 || grains.count > stormGrains) { continue }
+                let loss = stormy ? min(snow * 0.1, crest * 0.6 * share * dt) : min(snow * 0.2, (0.2 + max(0, height - around) * 1.5) * share * dt)
                 layer.remove(snow: loss, from: i)
                 heightsChanged = true
                 dust += loss * layer.columnWidth
