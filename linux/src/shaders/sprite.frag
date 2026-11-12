@@ -675,7 +675,25 @@ void main() {
     vec2 d = p - halfStreak * t;
     float r = length(d) / max(vRadius, 0.001);
     float shading = 0.0;
-    if (vLump > 0.0) {
+    if (vLump < -0.5) {
+        float angle = atan(d.y, d.x) + vSpin;
+        if (vLump > -1.75) {
+            // A crystal: six arms, each with a pair of side branches, round a small hexagonal core.
+            float sector = abs(fract(angle / 1.0472 + 0.5) - 0.5) * 1.0472;
+            vec2 q = vec2(cos(sector), sin(sector)) * (length(d) / max(vRadius, 0.001));
+            float arm = max(abs(q.y) - 0.13 * (1.0 - q.x * 0.5), q.x - 1.0);
+            vec2 b = q - vec2(0.55, 0.0);
+            vec2 dir = vec2(0.5, 0.866);
+            float along = clamp(dot(b, dir), 0.0, 0.32);
+            float branch = length(b - dir * along) - 0.09;
+            float core = length(q) - 0.3;
+            r = 1.0 + min(min(arm, branch), core) * 7.0;
+        } else {
+            // A big flake: a soft, ragged clump of crystals stuck together.
+            r /= 1.0 + 0.16 * sin(5.0 * angle) + 0.1 * sin(3.0 * angle + vLump * 17.0) + 0.06 * sin(7.0 * angle - vSpin);
+            shading = clamp(dot(d / max(vRadius, 0.001), vec2(0.45, -0.6)), 0.0, 1.0) * 0.25;
+        }
+    } else if (vLump > 0.0) {
         float angle = atan(d.y, d.x) + vSpin;
         r /= 1.0 + 0.14 * sin(3.0 * angle) + 0.08 * sin(5.0 * angle + vLump * 21.0) + 0.05 * sin(2.0 * angle + vLump * 9.0);
         shading = clamp(dot(d / max(vRadius, 0.001), vec2(0.45, -0.6)), 0.0, 1.0) * 0.4;

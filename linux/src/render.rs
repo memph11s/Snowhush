@@ -184,6 +184,7 @@ impl Gpu {
                     "blossom",
                     "wilt",
                     "glass",
+                    "flakeStyle",
                 ],
             )?;
             let field =
@@ -558,6 +559,7 @@ impl Gpu {
                 gl.uniform_1_f32(sprite.location("autumn"), autumn);
                 gl.uniform_1_f32(sprite.location("blossom"), blossom);
                 gl.uniform_1_f32(sprite.location("wilt"), wilt);
+                gl.uniform_1_f32(sprite.location("flakeStyle"), simulation.flake_style as f32);
                 gl.draw_arrays_instanced(glow::TRIANGLE_STRIP, 0, 4, sprites as i32);
                 if let Some((texture, _)) = field {
                     let program = &self.glass;

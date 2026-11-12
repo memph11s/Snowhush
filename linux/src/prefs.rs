@@ -34,6 +34,10 @@ pub struct Settings {
     pub max_performance: bool,
     /// How opaque what falls is drawn, in percent.
     pub opacity: u32,
+    /// A strong, gusty wind from one side.
+    pub storm: bool,
+    /// How snowflakes are drawn: 0 soft, 1 crystals, 2 big flakes.
+    pub flake_style: u8,
 }
 
 impl Settings {
@@ -72,6 +76,8 @@ impl Settings {
             // Before rain there was only a switch for leaves.
             max_performance: read("performance").is_some_and(|v| v == 1),
             opacity: read("fallingOpacity").map_or(100, |v| v.clamp(10, 100)),
+            storm: read("storm").is_some_and(|v| v != 0),
+            flake_style: read("flakeStyle").map_or(0, |v| v.min(2) as u8),
             mode,
             mixed: read("mixed").is_some_and(|v| v != 0),
             mix: mix_of(read("mix0"), read("mix1"), mode),
@@ -85,7 +91,7 @@ impl Settings {
     pub fn save(&self) {
         let Some(folder) = config_dir() else { return };
         let text = format!(
-            "intensity={}\nsettleGround={}\nsettlePanel={}\nmeltSnow={}\nsnowOnWindows={}\nbehindWindows={}\nshowOverFullScreen={}\nshowInScreenshots={}\ninstalledAt={}\nhalloweenOn={}\nhalloweenSkipped={}\nmode={}\nmixed={}\nmix0={}\nmix1={}\nautumn={}\nperformance={}\nfallingOpacity={}\n",
+            "intensity={}\nsettleGround={}\nsettlePanel={}\nmeltSnow={}\nsnowOnWindows={}\nbehindWindows={}\nshowOverFullScreen={}\nshowInScreenshots={}\ninstalledAt={}\nhalloweenOn={}\nhalloweenSkipped={}\nmode={}\nmixed={}\nmix0={}\nmix1={}\nautumn={}\nperformance={}\nfallingOpacity={}\nstorm={}\nflakeStyle={}\n",
             self.intensity,
             self.ground as u32,
             self.panel as u32,
@@ -103,7 +109,9 @@ impl Settings {
             MODES.iter().position(|&m| m == self.mix[1]).unwrap_or(0),
             (self.mode == Mode::Autumn) as u32,
             self.max_performance as u32,
-            self.opacity
+            self.opacity,
+            self.storm as u32,
+            self.flake_style
         );
         let _ = std::fs::create_dir_all(&folder);
         let _ = std::fs::write(folder.join("settings"), text);

@@ -271,6 +271,39 @@ impl ksni::Tray for Tray {
             .into(),
             SubMenu { label: tr("accumulate").into(), submenu: surfaces, ..Default::default() }.into(),
             SubMenu { label: tr("mode").into(), submenu: kinds, ..Default::default() }.into(),
+            SubMenu {
+                label: tr("flakes.style").into(),
+                submenu: vec![
+                    RadioGroup {
+                        selected: settings.flake_style as usize,
+                        select: Box::new(|tray: &mut Tray, index| {
+                            tray.change(|settings| {
+                                settings.flake_style = index.min(2) as u8;
+                                Command::FlakeStyle(settings.flake_style)
+                            });
+                        }),
+                        options: ["flakes.style.soft", "flakes.style.crystals", "flakes.style.big"]
+                            .iter()
+                            .map(|key| RadioItem { label: tr(key).into(), ..Default::default() })
+                            .collect(),
+                    }
+                    .into(),
+                ],
+                ..Default::default()
+            }
+            .into(),
+            CheckmarkItem {
+                label: tr("storm").into(),
+                checked: settings.storm,
+                activate: Box::new(|tray: &mut Tray| {
+                    tray.change(|settings| {
+                        settings.storm = !settings.storm;
+                        Command::Storm(settings.storm)
+                    })
+                }),
+                ..Default::default()
+            }
+            .into(),
             StandardItem {
                 label: text::kinds("clear", &heaps).into(),
                 visible: lies,

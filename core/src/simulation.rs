@@ -68,6 +68,9 @@ const GUST_WIND: f32 = 1000.0;
 const GUST_LAG: f32 = 0.3;
 /// Snow a wall scrapes up packs down to this share of its fresh bulk.
 const PACKING: f32 = 0.6;
+/// The most powder the storm keeps in the air off the crests at once.
+const STORM_GRAINS: usize = 400;
+
 /// A sliding desktop drags the air along: the wind it stirs up is this share of its speed, up to `SLIDE_WIND_MAX`,
 /// and dies down over `SLIDE_CALM` seconds once the desktop stops.
 const SLIDE_DRAG: f32 = 0.025;
@@ -414,6 +417,9 @@ struct Air {
     /// display, or by a gentler pointer, the same jerk of the hand moves it fewer points a second, and its snow should
     /// come off as easily. Side to side the snow slides on the window, which shows any such boost as sliding too far.
     jolt_scale: f32,
+    /// A storm's wind, steady from one side with gusts on top; zero in calm air.
+    storm_wind: f32,
+    storm_direction: f32,
 }
 
 pub struct SnowSimulation {
@@ -425,6 +431,10 @@ pub struct SnowSimulation {
     density: f32,
     pub thaws: bool,
     pub accumulates: bool,
+    /// A strong, gusty wind from one side: the snow flies slanted and powder blows off the drifts.
+    storm: bool,
+    /// How snowflakes are drawn: 0 soft and round, 1 crystals, 2 big ragged flakes.
+    pub flake_style: u8,
     /// Whether snow and leaves settle along the bottom of the screen; rain splashes there either way.
     pub ground_settles: bool,
     /// How opaque snow, leaves and rain are while they fall, from the sky or off a window; once settled they show in full.
@@ -485,6 +495,8 @@ impl SnowSimulation {
             intensity: intensity.clamp(0.0, 1.0),
             density: 1.0,
             thaws: false,
+            storm: false,
+            flake_style: 0,
             accumulates: true,
             ground_settles: true,
             falling_opacity: 1.0,
@@ -535,6 +547,8 @@ impl SnowSimulation {
                 airborne: [0; 4],
                 leaf_budget: 0.0,
                 jolt_scale: jolt_scale(height),
+                storm_wind: 0.0,
+                storm_direction: 1.0,
             },
         };
         simulation.update_target();
@@ -680,8 +694,18 @@ impl SnowSimulation {
 
     /// Nothing falls, lies, waits for its window or haunts, and nothing will until the snowfall or Halloween is
     /// turned on: the screen can rest.
+    /// Switches the storm on or off; it comes up and dies down over a few seconds.
+    pub fn set_storm(&mut self, on: bool) {
+        if on && !self.storm && self.air.storm_wind == 0.0 {
+            self.air.storm_direction = if self.air.random.next() < 0.5 { -1.0 } else { 1.0 };
+        }
+        self.storm = on;
+    }
+
     pub fn is_empty(&self) -> bool {
         self.intensity <= 0.0
+            && !self.storm
+            && self.air.storm_wind == 0.0
             && !self.haunting.on
             && self.sprite_count() == 0
             && !self.haunting.moving()
@@ -777,6 +801,7 @@ impl SnowSimulation {
         self.air.heights_changed = false;
 
         self.release_scattered();
+        self.tend_storm(dt);
         let wind = self.air.slide_wind;
         self.air.slide_wind = if wind.abs() < 1.0 { 0.0 } else { wind * (-dt / SLIDE_CALM).exp() };
         self.air.leaf_budget = self.spare_leaves();
@@ -827,7 +852,8 @@ impl SnowSimulation {
             || air.gust.is_some()
             || self.haunting.pushing(air.clock);
         // The steady trickle off window corners is a few tiny grains at a time; they read fine at the calm rate.
-        let flying = air.grains.len() > 24 || air.clock < self.scattered_until || air.slide_wind.abs() > 20.0;
+        let flying = air.grains.len() > 24 || air.clock < self.scattered_until || air.slide_wind.abs() > 20.0
+            || (air.storm_wind.abs() > 110.0 && !air.flakes.is_empty());
         self.pace = if pushed {
             Pace::Interactive
         } else if flying {
@@ -1239,7 +1265,10 @@ impl SnowSimulation {
     fn advance_flakes(&mut self, dt: f32) {
         let wind = self.air.breeze() + self.air.slide_wind;
         // A desktop's wind is short: the flakes take it up faster than the slow breeze, or it would be gone first.
-        let follow = (dt * (1.2 + self.air.slide_wind.abs() * 0.03)).min(1.0);
+        let storm = self.air.storm_share();
+        let follow = (dt * (1.2 + self.air.slide_wind.abs() * 0.03 + storm * 1.5)).min(1.0);
+        // In a storm the snow is driven down faster.
+        let driven = 1.0 + 0.7 * storm;
         let settle = (dt * 1.6).min(1.0);
         let wake = self.air.cursor_wake();
         self.air.airborne = self.kind_counts();
@@ -1256,7 +1285,7 @@ impl SnowSimulation {
                 let drive = if flake.rain() { 3.0 } else { 1.0 };
                 flake.velocity.x += (wind * drive * (0.35 + 0.65 * flake.depth) - flake.velocity.x) * follow;
             }
-            flake.velocity.y += (-flake.fall_speed - flake.velocity.y) * settle;
+            flake.velocity.y += (-flake.fall_speed * driven - flake.velocity.y) * settle;
 
             if let Some(wake) = wake
                 && !flake.rain()
@@ -1619,15 +1648,30 @@ impl SnowSimulation {
 
     /// The wind of a sliding desktop skims the drifts, most off the crests that stand above the snow around them:
     /// a little powder flies a short way downwind and settles again.
+    /// The storm comes up over a few seconds, blows in gusts and dies down as slowly once it is switched off.
+    fn tend_storm(&mut self, dt: f32) {
+        let air = &mut self.air;
+        let target = if self.storm { air.storm_direction * (70.0 + 70.0 * air.storm_gusts()) } else { 0.0 };
+        air.storm_wind += (target - air.storm_wind) * (dt * if self.storm { 0.9 } else { 0.6 }).min(1.0);
+        if !self.storm && air.storm_wind.abs() < 0.5 {
+            air.storm_wind = 0.0;
+        }
+    }
+
     fn skim(&mut self, dt: f32) {
-        let share = self.air.slide_wind.abs() / SLIDE_WIND_MAX;
-        if share <= 0.1 {
+        let sliding = self.air.slide_wind.abs() / SLIDE_WIND_MAX;
+        // The storm only lifts the crests, a little at a time, and never more powder than is in the air already: it
+        // blows for as long as it is on, and would carry the whole drift off the screen.
+        let stormy = sliding < 0.1 && self.air.storm_share() > 0.3;
+        let share = if stormy { self.air.storm_share() * (0.5 + 0.5 * self.air.storm_gusts()) } else { sliding };
+        if share <= 0.1 || (stormy && self.air.grains.len() > STORM_GRAINS) {
             return;
         }
+        let pace = if stormy { 0.05 } else { 1.0 };
         // Of leaves it lifts some of those lying on top, never the mass under them.
         let shown: HashMap<WindowId, usize> = self.ids.iter().enumerate().map(|(li, &id)| (id, li)).collect();
         for k in (0..self.lying.len()).rev() {
-            if self.air.random.next() >= share * dt {
+            if self.air.random.next() >= share * dt * pace {
                 continue;
             }
             let leaf = self.lying[k];
@@ -1637,8 +1681,9 @@ impl SnowSimulation {
             if !layer.visible[i] || layer.surface(i) - layer.base().y >= leaf.top + 2.0 {
                 continue;
             }
+            let skim_wind = self.air.skim_wind();
             let random = &mut self.air.random;
-            let velocity = V2::new(self.air.slide_wind * random.range(1.5, 3.0), random.range(30.0, 120.0));
+            let velocity = V2::new(skim_wind * random.range(1.5, 3.0), random.range(30.0, 120.0));
             self.fly(k, li, velocity, false);
         }
         for layer in &mut self.layers {
@@ -1651,7 +1696,15 @@ impl SnowSimulation {
                     continue;
                 }
                 let around = (layer.heights[i.saturating_sub(12)] + layer.heights[(i + 12).min(count - 1)]) / 2.0;
-                let loss = (snow * 0.2).min((0.2 + (height - around).max(0.0) * 1.5) * share * dt);
+                let crest = (height - around - 1.5).max(0.0);
+                if stormy && (crest <= 0.0 || self.air.grains.len() > STORM_GRAINS) {
+                    continue;
+                }
+                let loss = if stormy {
+                    (snow * 0.1).min(crest * 0.6 * share * dt)
+                } else {
+                    (snow * 0.2).min((0.2 + (height - around).max(0.0) * 1.5) * share * dt)
+                };
                 layer.remove_snow(loss, i);
                 self.air.heights_changed = true;
                 dust += loss * layer.column_width;
@@ -2799,7 +2852,23 @@ impl Air {
 
     fn breeze(&self) -> f32 {
         let t = self.clock;
-        (10.0 * (t * 0.07).sin() + 6.0 * (t * 0.19 + 1.7).sin() + 3.0 * (t * 0.43 + 4.1).sin()) as f32
+        (10.0 * (t * 0.07).sin() + 6.0 * (t * 0.19 + 1.7).sin() + 3.0 * (t * 0.43 + 4.1).sin()) as f32 + self.storm_wind
+    }
+
+    /// How hard the storm blows, from 0 in calm air to 1 at its strongest.
+    fn storm_share(&self) -> f32 {
+        (self.storm_wind.abs() / 140.0).min(1.0)
+    }
+
+    /// The storm's gusts, from 0 to 1.
+    fn storm_gusts(&self) -> f32 {
+        let t = self.clock;
+        (0.5 + 0.3 * (t * 0.83).sin() * (t * 0.31 + 1.3).sin() + 0.2 * (t * 2.1 + 0.4).sin()).clamp(0.0, 1.0) as f32
+    }
+
+    /// What blows the powder off the crests: a sliding desktop's wind, or the storm's when that is stronger.
+    fn skim_wind(&self) -> f32 {
+        if self.slide_wind.abs() >= self.storm_wind.abs() * 0.5 { self.slide_wind } else { self.storm_wind * 0.5 }
     }
 
     fn gust_speed(&self) -> f32 {
@@ -2847,7 +2916,7 @@ impl Air {
         if self.grains.len() >= MAX_GRAINS {
             return;
         }
-        let wind = self.slide_wind;
+        let wind = self.skim_wind();
         let random = &mut self.random;
         self.grains.push(Grain {
             position: position + V2::new(random.range(-1.0, 1.0), random.range(-2.0, 0.0)),

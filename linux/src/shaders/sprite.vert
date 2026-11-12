@@ -12,6 +12,8 @@ uniform vec4 lantern;
 uniform vec4 pumpkins[3];
 // How far everything is jolted, in points.
 uniform vec2 shake;
+// How snowflakes are drawn: 0 soft and round, 1 crystals, 2 big ragged flakes.
+uniform float flakeStyle;
 
 layout(location = 0) in vec2 position;
 layout(location = 1) in vec2 velocity;
@@ -182,7 +184,9 @@ void main() {
         return;
     }
     vLeaf = vec4(0.0);
-    float pixels = size * scale;
+    // Crystals and big flakes are drawn larger than the soft round ones, so their shape reads.
+    bool styled = lump == 0.0 && ghost.x == 0.0 && rain.x == 0.0 && petal == 0.0 && flakeStyle > 0.5;
+    float pixels = size * scale * (styled ? (flakeStyle < 1.5 ? 2.2 : 1.7) : 1.0);
     // About a 1/55 s exposure, capped so even the fastest grain stays a short smear and never reads as rain.
     vec2 travel = velocity * 0.018;
     float smear = min(length(travel), size * (lump > 0.0 ? 1.2 : 2.2));
@@ -200,6 +204,12 @@ void main() {
     vTint = vec4(tintColor, tintAmount);
     vLump = lump;
     vSpin = lump > 0.0 ? time * (lump - 0.5) * 9.0 + lump * 40.0 : 0.0;
+    if (styled) {
+        // Each flake its own turn, slowly turning as it falls; its seed rides in the lump as a negative number.
+        float seed = fract(size * 37.17);
+        vSpin = seed * 6.2832 + time * (seed - 0.5) * 1.6;
+        vLump = -(flakeStyle < 1.5 ? 1.0 : 2.0) - seed * 0.5;
+    }
     vGhost = vec4(ghost.x, (ghost.y - position.y) / max(size, 0.001), ghost.zw);
     vPose = pose;
     vMood = vec4(mood, size, 0.0);

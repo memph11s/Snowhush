@@ -45,6 +45,10 @@ pub struct Settings {
     pub max_performance: bool,
     /// How opaque what falls is drawn, in percent: 10 to 100 in steps of 5.
     pub opacity: u32,
+    /// A strong, gusty wind from one side.
+    pub storm: bool,
+    /// How snowflakes are drawn: 0 soft, 1 crystals, 2 big flakes.
+    pub flake_style: u8,
 }
 
 impl Settings {
@@ -86,6 +90,8 @@ impl Settings {
             // Before rain there was only a switch for leaves.
             max_performance: read(w!("performance")).is_some_and(|v| v == 1),
             opacity: read(w!("fallingOpacity")).map_or(100, |v| v.clamp(10, 100)),
+            storm: read(w!("storm")).is_some_and(|v| v != 0),
+            flake_style: read(w!("flakeStyle")).map_or(0, |v| v.min(2) as u8),
             mode,
             mixed: read(w!("mixed")).is_some_and(|v| v != 0),
             mix: mix_of(read(w!("mix0")), read(w!("mix1")), mode),
@@ -113,6 +119,8 @@ impl Settings {
         write(w!("autumn"), (self.mode == Mode::Autumn) as u32);
         write(w!("performance"), self.max_performance as u32);
         write(w!("fallingOpacity"), self.opacity);
+        write(w!("storm"), self.storm as u32);
+        write(w!("flakeStyle"), self.flake_style as u32);
     }
 
     /// The kinds falling: the two mixed, or the one picked.

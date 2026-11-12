@@ -42,6 +42,8 @@ pub enum Command {
     FallingOpacity(f32),
     Ground(bool),
     Melt(bool),
+    Storm(bool),
+    FlakeStyle(u8),
     SnowOnWindows(bool),
     BehindWindows(bool),
     OverFullScreen(bool),
@@ -147,6 +149,14 @@ fn run_loop(commands: &Receiver<Command>, links: &Links, mut settings: Settings)
                         screen.simulation.ground_settles = on;
                         screen.simulation.accumulates = accumulates;
                     });
+                }
+                Command::FlakeStyle(style) => {
+                    settings.flake_style = style;
+                    screens.iter_mut().for_each(|screen| screen.simulation.flake_style = style);
+                }
+                Command::Storm(on) => {
+                    settings.storm = on;
+                    screens.iter_mut().for_each(|screen| screen.simulation.set_storm(on));
                 }
                 Command::Melt(on) => {
                     settings.melt = on;
@@ -613,6 +623,8 @@ fn new_simulation(monitor: &Monitor, settings: &Settings) -> SnowSimulation {
     let (width, height) = dip_size(monitor);
     let mut simulation = SnowSimulation::new(width as f32, height as f32, settings.intensity as f32 / 100.0);
     simulation.thaws = settings.melt;
+    simulation.set_storm(settings.storm);
+    simulation.flake_style = settings.flake_style;
     simulation.accumulates = settings.accumulates();
     simulation.ground_settles = settings.ground;
     simulation.falling_opacity = settings.opacity as f32 / 100.0;

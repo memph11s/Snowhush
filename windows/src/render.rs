@@ -78,7 +78,8 @@ struct Uniforms {
     blossom: f32,
     /// One while fallen leaves wither away.
     wilt: f32,
-    padding: f32,
+    /// How snowflakes are drawn: 0 soft, 1 crystals, 2 big flakes.
+    flake_style: f32,
 }
 
 /// Where a sign stands: its stick's foot, its size in points, how far it is turned and the drift's surface it comes up out of.
@@ -527,7 +528,7 @@ impl Surface {
                 autumn: if simulation.leafy() { 1.0 } else { 0.0 },
                 blossom: if simulation.blossom() { 1.0 } else { 0.0 },
                 wilt: if simulation.wilts() { 1.0 } else { 0.0 },
-                padding: 0.0,
+                flake_style: simulation.flake_style as f32,
             };
 
             // The pumpkins go down before the snow, so the drift they sit in covers their bottoms.

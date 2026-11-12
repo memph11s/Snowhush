@@ -60,6 +60,9 @@ const ID_BLOSSOM: u32 = 217;
 const ID_MIXED: u32 = 219;
 const ID_GROUND: u32 = 220;
 const ID_OPACITY_FOLD: u32 = 221;
+const ID_STORM: u32 = 222;
+/// Snowflake styles: `ID_FLAKES` + the style.
+const ID_FLAKES: u32 = 223;
 /// Opacity from 10% up in steps of 5%: `ID_OPACITY` + the step.
 const ID_OPACITY: u32 = 400;
 const OPACITY_STEPS: u32 = 19;
@@ -437,6 +440,13 @@ fn entries(settings: &Settings, login: bool, sliders: bool) -> Vec<Entry> {
     };
     entries.extend(accumulate(settings, !heaps.is_empty(), sliders));
     entries.push(Entry::Submenu { label: tr("mode").to_string(), entries: modes });
+    let styles = ["flakes.style.soft", "flakes.style.crystals", "flakes.style.big"]
+        .iter()
+        .enumerate()
+        .map(|(k, key)| Entry::choice(ID_FLAKES + k as u32, tr(key), settings.flake_style as usize == k))
+        .collect();
+    entries.push(Entry::Submenu { label: tr("flakes.style").to_string(), entries: styles });
+    entries.push(Entry::toggle(ID_STORM, tr("storm"), settings.storm, true));
     if !heaps.is_empty() {
         entries.push(Entry::item(ID_CLEAR, text::kinds("clear", &heaps), false, true));
     }
@@ -584,6 +594,14 @@ fn choose(window: HWND, chosen: u32, login: bool) {
                 ID_MELT => {
                     settings.melt = !settings.melt;
                     Command::Melt(settings.melt)
+                }
+                id if (ID_FLAKES..ID_FLAKES + 3).contains(&id) => {
+                    settings.flake_style = (id - ID_FLAKES) as u8;
+                    Command::FlakeStyle(settings.flake_style)
+                }
+                ID_STORM => {
+                    settings.storm = !settings.storm;
+                    Command::Storm(settings.storm)
                 }
                 ID_WINDOWS => {
                     settings.snow_on_windows = !settings.snow_on_windows;
