@@ -79,3 +79,16 @@
 "setup.open" = "Abrir o Snowhush";
 "setup.failed" = "Não foi possível instalar: {error}.";
 "setup.retry" = "Tentar de novo";
+"settings.window" = "Ajustes do Snowhush";
+"settings.open" = "Ajustes…";
+"tab.snowfall" = "Nevada";
+"tab.drifts" = "Montes";
+"newyear.more" = "Estilo da guirlanda e dos flocos…";
+"mixed.about" = "Caem dois modos ao mesmo tempo: o último escolhido e o anterior.";
+"deep.about" = "A neve também pousa num retângulo de seleção na mesa.";
+"performance.about" = "Desenha na taxa máxima da tela. Mais suave, mas gasta mais energia.";
+"newyear.decor.about" = "Bolas, presentes e um boneco de neve com uma placa na neve no pé da tela.";
+"icicles.about" = "Crescem sob as bordas inferiores das janelas e pingam de vez em quando.";
+"storm.about" = "Vento forte com rajadas: a neve cai inclinada e voa dos montes.";
+"snowmen.howto" = "Segure ⌥ Option e passe o cursor pela neve para rolar uma bola que cresce. Solte Option para deixá-la. Arraste uma bola com o mouse ou jogue-a. Ponha uma bola menor sobre uma maior e uma terceira em cima para fazer um boneco de neve.";
+"settings.doubleclick" = "Clique duas vezes no ícone do Snowhush na barra de menus, ou escolha Ajustes… no menu, para abrir esta janela.";

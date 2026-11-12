@@ -87,3 +87,16 @@
 "setup.open" = "Open Snowhush";
 "setup.failed" = "Couldn't install: {error}.";
 "setup.retry" = "Try Again";
+"settings.window" = "Snowhush Settings";
+"settings.open" = "Settings…";
+"tab.snowfall" = "Snowfall";
+"tab.drifts" = "Drifts";
+"newyear.more" = "Garland and snowflake styles…";
+"mixed.about" = "Two modes fall at once: the last one picked and the one before it.";
+"deep.about" = "Snow also settles on a selection rectangle dragged across the desktop.";
+"performance.about" = "Draws at the display's full refresh rate. Smoother, but uses more energy.";
+"newyear.decor.about" = "Ornaments, gifts and a snowman with a sign in the drift at the bottom of the screen.";
+"icicles.about" = "Grow under the bottom edges of windows and drip now and then.";
+"storm.about" = "A strong, gusty wind: snow flies slanted and is blown off the drifts.";
+"snowmen.howto" = "Hold ⌥ Option and move the pointer through snow to roll a growing ball. Let go of Option to leave it lying. Drag a ball with the mouse or throw it. Put a smaller ball on a bigger one and a third on top to make a snowman.";
+"settings.doubleclick" = "Double-click the Snowhush icon in the menu bar, or choose Settings… in its menu, to open this window.";

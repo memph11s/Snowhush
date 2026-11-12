@@ -79,3 +79,16 @@
 "setup.open" = "Snowhushを開く";
 "setup.failed" = "インストールできませんでした：{error}。";
 "setup.retry" = "再試行";
+"settings.window" = "Snowhush 設定";
+"settings.open" = "設定…";
+"tab.snowfall" = "降雪";
+"tab.drifts" = "積雪";
+"newyear.more" = "イルミネーションと雪の種類…";
+"mixed.about" = "2つのモードが同時に降ります：最後に選んだものとその前のもの。";
+"deep.about" = "デスクトップの選択範囲の枠にも雪が積もります。";
+"performance.about" = "ディスプレイの最大リフレッシュレートで描画します。滑らかですが電力を多く使います。";
+"newyear.decor.about" = "画面下の雪だまりにオーナメント、プレゼント、看板を持った雪だるま。";
+"icicles.about" = "ウインドウの下端の下に伸び、ときどき滴が落ちます。";
+"storm.about" = "突風を伴う強風：雪は斜めに舞い、雪だまりから吹き飛ばされます。";
+"snowmen.howto" = "⌥ Option を押したままポインタを雪の中で動かすと、雪玉が転がって大きくなります。Option を離すとその場に残ります。雪玉はマウスでドラッグしたり投げたりできます。大きい玉の上に小さい玉、さらにもう1つ載せると雪だるまになります。";
+"settings.doubleclick" = "メニューバーの Snowhush アイコンをダブルクリックするか、メニューの「設定…」でこのウインドウを開けます。";

@@ -79,3 +79,16 @@
 "setup.open" = "打开 Snowhush";
 "setup.failed" = "无法安装：{error}。";
 "setup.retry" = "重试";
+"settings.window" = "Snowhush 设置";
+"settings.open" = "设置…";
+"tab.snowfall" = "降雪";
+"tab.drifts" = "积雪";
+"newyear.more" = "彩灯与雪花样式…";
+"mixed.about" = "同时飘落两种模式：最后选择的和之前的。";
+"deep.about" = "雪也会落在桌面上拖出的选择框上。";
+"performance.about" = "以显示器的最高刷新率绘制。更流畅，但更耗电。";
+"newyear.decor.about" = "屏幕底部雪堆里的彩球、礼物和举着牌子的雪人。";
+"icicles.about" = "在窗口下边缘下方生长，不时滴落水滴。";
+"storm.about" = "阵阵强风：雪斜着飞，雪堆上的雪被吹起。";
+"snowmen.howto" = "按住 ⌥ Option 并在雪中移动指针，就会滚出一个不断变大的雪球。松开 Option，雪球就留在原地。可以用鼠标拖动或扔出雪球。把小雪球放在大雪球上，再放第三个，就成了雪人。";
+"settings.doubleclick" = "在菜单栏中双击 Snowhush 图标，或在其菜单中选择“设置…”即可打开此窗口。";

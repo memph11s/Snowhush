@@ -14,33 +14,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
     private var halloween = false
     private var statusItem: NSStatusItem!
     private let intensitySlider = MenuSlider(range: 0...1)
-    private let opacitySlider = MenuSlider(range: Preferences.opacityRange, captioned: false)
-    private var opacityItem: NSMenuItem!
-    private let opacityRow = MenuDisclosure()
-    private var opacitySliderItem: NSMenuItem!
-    private var accumulateItem: NSMenuItem!
-    private let accumulateRow = MenuDisclosure()
-    private var surfacesItem: NSMenuItem!
-    private let surfacePicker = SurfacePicker()
-    private var meltItem: NSMenuItem!
     private var clearItem: NSMenuItem!
     private var halloweenItem: NSMenuItem!
     private var newYearItem: NSMenuItem!
     private var stormItem: NSMenuItem!
     private var garlandItem: NSMenuItem!
-    private var garlandBlinksItem: NSMenuItem!
     private var iciclesItem: NSMenuItem!
     private var snowmenItem: NSMenuItem!
-    private var garlandStyleItems: [NSMenuItem] = []
-    private var flakeStyleItems: [NSMenuItem] = []
     private var mixedItem: NSMenuItem!
     private var modeItems: [(item: NSMenuItem, mode: Mode)] = []
-    private var maxPerformanceItem: NSMenuItem!
-    private var behindWindowsItem: NSMenuItem!
-    private var fullScreenItem: NSMenuItem!
-    private var screenshotsItem: NSMenuItem!
-    private var deepInteractionItem: NSMenuItem!
-    private var loginItem: NSMenuItem!
     private var observers: [NSObjectProtocol] = []
     private var screensAsleep = false
     private let screenshots = ScreenshotWatch()
@@ -166,35 +148,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         let intensityItem = NSMenuItem()
         intensityItem.view = intensitySlider
         menu.addItem(intensityItem)
-        // Opacity is set once and left, so it folds away like Accumulate, its value on the row.
-        opacityItem = menu.addItem(withTitle: tr("opacity"), action: nil, keyEquivalent: "")
-        opacityItem.view = opacityRow
-        opacityRow.summaryWhileOpen = true
-        opacityRow.toggled = { [unowned self] in
-            opacityRow.open.toggle()
-            opacitySliderItem.isHidden = !opacityRow.open
-        }
-        opacitySlider.changed = { [unowned self] opacity in
-            Preferences.fallingOpacity = opacity
-            for snow in screens { snow.simulation.fallingOpacity = Float(opacity) }
-            opacityRow.summary = MenuSlider.percent(opacity)
-        }
-        opacitySliderItem = NSMenuItem()
-        opacitySliderItem.view = opacitySlider
-        opacitySliderItem.isHidden = true
-        menu.addItem(opacitySliderItem)
-        accumulateItem = menu.addItem(withTitle: tr("accumulate"), action: nil, keyEquivalent: "")
-        accumulateItem.view = accumulateRow
-        accumulateRow.toggled = { [unowned self] in
-            accumulateRow.open.toggle()
-            surfacesItem.isHidden = !accumulateRow.open
-            if !accumulateRow.open { accumulateRow.fit(accumulateItem.title, least: surfacePicker.frame.width) }
-        }
-        surfacesItem = NSMenuItem()
-        surfacesItem.view = surfacePicker
-        surfacesItem.isHidden = true
-        surfacePicker.toggled = { [unowned self] surface in toggle(surface) }
-        menu.addItem(surfacesItem)
         let modes = NSMenu()
         modes.autoenablesItems = false
         mixedItem = toggle(tr("mixed"), #selector(toggleMixed), to: modes)
@@ -212,51 +165,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         newYear.autoenablesItems = false
         newYearItem = toggle(tr("newyear.decor"), #selector(toggleNewYear), to: newYear)
         garlandItem = toggle(tr("garland"), #selector(toggleGarland), to: newYear)
-        garlandBlinksItem = toggle(tr("garland.blinks"), #selector(toggleGarlandBlinks), to: newYear)
         iciclesItem = toggle(tr("icicles"), #selector(toggleIcicles), to: newYear)
         snowmenItem = toggle(tr("snowmen"), #selector(toggleSnowmen), to: newYear)
-        newYear.addItem(.separator())
         stormItem = toggle(tr("storm"), #selector(toggleStorm), to: newYear)
-        newYear.addItem(.separator())
-        let garlandStyles = NSMenu()
-        garlandStyleItems = ["garland.style.bulbs", "garland.style.fairy", "garland.style.stars"].enumerated().map { k, key in
-            let item = add(tr(key), #selector(chooseGarlandStyle), to: garlandStyles)
-            item.tag = k
-            return item
-        }
-        newYear.addItem(withTitle: tr("garland.style"), action: nil, keyEquivalent: "").submenu = garlandStyles
-        let flakeStyles = NSMenu()
-        flakeStyleItems = ["flakes.style.soft", "flakes.style.crystals", "flakes.style.big"].enumerated().map { k, key in
-            let item = add(tr(key), #selector(chooseFlakeStyle), to: flakeStyles)
-            item.tag = k
-            return item
-        }
-        newYear.addItem(withTitle: tr("flakes.style"), action: nil, keyEquivalent: "").submenu = flakeStyles
         newYear.addItem(.separator())
         let hint = newYear.addItem(withTitle: tr("snowmen.hint"), action: nil, keyEquivalent: "")
         hint.isEnabled = false
+        add(tr("newyear.more"), #selector(showSettings), to: newYear)
         // Several are wanted at once, so the menu stays open between them.
-        for item in [newYearItem, garlandItem, garlandBlinksItem, iciclesItem, snowmenItem, stormItem] { (item?.view as? MenuToggle)?.staysOpen = { true } }
+        for item in [newYearItem, garlandItem, iciclesItem, snowmenItem, stormItem] { (item?.view as? MenuToggle)?.staysOpen = { true } }
         menu.addItem(withTitle: tr("newyear"), action: nil, keyEquivalent: "").submenu = newYear
         clearItem = add(tr("clear.snow"), #selector(clearSnow), to: menu)
         menu.addItem(.separator())
-        let settings = NSMenu()
-        settings.autoenablesItems = false
-        settings.addItem(.sectionHeader(title: tr("behavior")))
-        meltItem = toggle(tr("melt.snow"), #selector(toggleMeltSnow), to: settings)
-        deepInteractionItem = toggle(tr("deep"), #selector(toggleDeepInteraction), to: settings)
-        settings.addItem(.separator())
-        settings.addItem(.sectionHeader(title: tr("display")))
-        behindWindowsItem = toggle(tr("behind"), #selector(toggleBehindWindows), to: settings)
-        fullScreenItem = toggle(tr("full_screen"), #selector(toggleFullScreen), to: settings)
-        screenshotsItem = toggle(tr("screenshots"), #selector(toggleScreenshots), to: settings)
-        maxPerformanceItem = toggle(tr("performance"), #selector(toggleMaxPerformance), to: settings)
-        settings.addItem(.separator())
-        settings.addItem(.sectionHeader(title: tr("general")))
-        loginItem = toggle(tr("login"), #selector(toggleOpenAtLogin), to: settings)
-        let updates = settings.addItem(withTitle: tr("updates"), action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
+        // Everything else is in the settings window, which a double click on the icon opens too.
+        let settings = add(tr("settings.open"), #selector(showSettings), to: menu)
+        settings.keyEquivalent = ","
+        let updates = menu.addItem(withTitle: tr("updates"), action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
         updates.target = updater
-        menu.addItem(withTitle: tr("settings"), action: nil, keyEquivalent: "").submenu = settings
         menu.addItem(withTitle: tr("quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         item.menu = menu
@@ -280,51 +205,106 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         intensitySlider.value = Preferences.intensity
-        opacitySlider.value = Preferences.fallingOpacity
-        opacityRow.summary = MenuSlider.percent(Preferences.fallingOpacity)
-        opacityRow.fit(opacityItem.title, least: 0)
         let modes = Mode.allCases.filter(Preferences.modes.contains)
         mixedItem.state = Preferences.mixed ? .on : .off
         for (item, mode) in modeItems { item.state = modes.contains(mode) ? .on : .off }
         // Rain neither heaps up nor lies about to clear away.
         let heaps = modes.filter { $0 != .rain }
-        meltItem.isHidden = heaps.isEmpty
         clearItem.isHidden = heaps.isEmpty
-        meltItem.title = tr(heaps.contains(.snow) ? "melt.snow" : heaps == [.blossom] ? "melt.blossom" : "melt.autumn")
         clearItem.title = tr("clear", heaps)
-        (meltItem.view as? MenuToggle)?.fit(meltItem.title)
-        // Top to bottom, as they lie on the screen. Rain splashes on the ground whatever it says.
-        let choices: [Surfaces] = [.widgets, .windows, .dock] + (heaps.isEmpty ? [] : [.ground])
-        if surfacePicker.choices != choices { surfacePicker.choices = choices }
-        surfacePicker.on = surfaces
-        let lit = choices.filter(surfaces.contains)
-        let every = lit.count == choices.count
-        accumulateRow.summary = every ? tr("all") : lit.isEmpty ? tr("off") : ""
-        accumulateRow.summaryIcons = every || lit.isEmpty ? [] : lit
-        // Unfolded, the summary isn't shown: the menu keeps its width while the icons are switched.
-        if !accumulateRow.open { accumulateRow.fit(accumulateItem.title, least: surfacePicker.frame.width) }
-        meltItem.state = thaws ? .on : .off
-        meltItem.isEnabled = !surfaces.isEmpty
-        deepInteractionItem.state = Preferences.deepInteraction ? .on : .off
-        deepInteractionItem.isEnabled = surfaces.contains(.windows)
         clearItem.isEnabled = screens.contains { $0.simulation.hasSnow || $0.simulation.spriteCount > 0 }
         halloweenItem.state = Halloween.isWanted ? .on : .off
         halloweenItem.isEnabled = modes == [.snow]
         newYearItem.state = Preferences.newYear ? .on : .off
         stormItem.state = Preferences.storm ? .on : .off
         garlandItem.state = Preferences.garland ? .on : .off
-        garlandBlinksItem.state = Preferences.garlandBlinks ? .on : .off
-        garlandBlinksItem.isEnabled = Preferences.garland
         iciclesItem.state = Preferences.icicles ? .on : .off
         snowmenItem.state = Preferences.snowmen ? .on : .off
-        for item in garlandStyleItems { item.state = item.tag == Preferences.garlandStyle ? .on : .off }
-        for item in flakeStyleItems { item.state = item.tag == Preferences.flakeStyle ? .on : .off }
-        maxPerformanceItem.state = Preferences.maxPerformance ? .on : .off
-        behindWindowsItem.state = behindWindows ? .on : .off
-        fullScreenItem.state = Preferences.showOverFullScreen ? .on : .off
-        fullScreenItem.isEnabled = !behindWindows
-        screenshotsItem.state = Preferences.showInScreenshots ? .on : .off
-        loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+    }
+
+    /// When the menu last opened: a second click on the icon soon after closes it and opens the settings window.
+    private var menuOpenedAt: TimeInterval = 0
+
+    func menuWillOpen(_ menu: NSMenu) {
+        guard menu === statusItem.menu else { return }
+        menuOpenedAt = ProcessInfo.processInfo.systemUptime
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        guard menu === statusItem.menu else { return }
+        settings?.model.reload()
+        guard let event = NSApp.currentEvent, event.type == .leftMouseDown || event.type == .leftMouseUp,
+              ProcessInfo.processInfo.systemUptime - menuOpenedAt < max(NSEvent.doubleClickInterval, 0.5),
+              let button = statusItem.button, let window = button.window, event.window === window || button.window?.frame.contains(NSEvent.mouseLocation) == true
+        else { return }
+        DispatchQueue.main.async { [weak self] in self?.showSettings() }
+    }
+
+    private var settings: SettingsWindowController?
+
+    @objc func showSettings() {
+        if settings == nil {
+            let controller = SettingsWindowController()
+            controller.model.apply = { [unowned self] change in apply(change) }
+            controller.model.loginEnabled = { SMAppService.mainApp.status == .enabled }
+            settings = controller
+        }
+        settings?.present()
+    }
+
+    /// Carries out a change from the settings window, as its menu item would.
+    private func apply(_ change: SettingChange) {
+        switch change {
+        case .intensity(let value):
+            select(intensity: value)
+        case .opacity(let value):
+            Preferences.fallingOpacity = value
+            for snow in screens { snow.simulation.fallingOpacity = Float(value) }
+        case .mode(let mode):
+            choose(mode)
+        case .mixed(let on):
+            if on != Preferences.mixed { toggleMixed() }
+        case .halloween(let on):
+            if on != Halloween.isWanted { toggleHalloween() }
+        case .flakeStyle(let style):
+            Preferences.flakeStyle = style
+            for snow in screens { snow.flakeStyle = style }
+        case .surface(let surface, let on):
+            if on != surfaces.contains(surface) { toggle(surface) }
+        case .melt(let on):
+            if on != thaws { toggleMeltSnow() }
+        case .deep(let on):
+            if on != Preferences.deepInteraction { toggleDeepInteraction() }
+        case .clear:
+            clearSnow()
+        case .newYear(let on):
+            if on != Preferences.newYear { toggleNewYear() }
+        case .garland(let on):
+            if on != Preferences.garland { toggleGarland() }
+        case .garlandBlinks(let on):
+            if on != Preferences.garlandBlinks { toggleGarlandBlinks() }
+        case .garlandStyle(let style):
+            Preferences.garlandStyle = style
+            for snow in screens { snow.garlandStyle = style }
+        case .icicles(let on):
+            if on != Preferences.icicles { toggleIcicles() }
+        case .snowmen(let on):
+            if on != Preferences.snowmen { toggleSnowmen() }
+        case .storm(let on):
+            if on != Preferences.storm { toggleStorm() }
+        case .behind(let on):
+            if on != behindWindows { toggleBehindWindows() }
+        case .fullScreen(let on):
+            if on != Preferences.showOverFullScreen { toggleFullScreen() }
+        case .screenshots(let on):
+            if on != Preferences.showInScreenshots { toggleScreenshots() }
+        case .performance(let on):
+            if on != Preferences.maxPerformance { toggleMaxPerformance() }
+        case .login(let on):
+            if on != (SMAppService.mainApp.status == .enabled) { toggleOpenAtLogin() }
+        case .updates:
+            updater.checkForUpdates(nil)
+        }
     }
 
     private func select(intensity: Double) {
@@ -341,10 +321,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
             snow.simulation.groundSettles = surfaces.contains(.ground)
         }
         if surfaces.isDisjoint(with: .tracked) { screens.forEach { $0.dropWindowSnow() } }
-        if let menu = statusItem.menu {
-            menuNeedsUpdate(menu)
-            menu.items.forEach { $0.view?.needsDisplay = true }
-        }
+        if let menu = statusItem.menu { menuNeedsUpdate(menu) }
     }
 
     @objc private func toggleMeltSnow() {
@@ -399,6 +376,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
     /// Mixed, a third mode picked takes the place of the one picked before the other.
     @objc private func chooseMode(_ sender: NSMenuItem) {
         guard let mode = modeItems.first(where: { $0.item === sender })?.mode else { return }
+        choose(mode)
+    }
+
+    private func choose(_ mode: Mode) {
         if Preferences.mixed {
             let mix = Preferences.mix
             guard !mix.contains(mode) else { return }
@@ -463,18 +444,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
     @objc private func toggleSnowmen() {
         Preferences.snowmen.toggle()
         for snow in screens { snow.snowmen = Preferences.snowmen }
-    }
-
-    @objc private func chooseGarlandStyle(_ sender: NSMenuItem) {
-        Preferences.garlandStyle = sender.tag
-        for snow in screens { snow.garlandStyle = Preferences.garlandStyle }
-        for item in garlandStyleItems { item.state = item.tag == sender.tag ? .on : .off }
-    }
-
-    @objc private func chooseFlakeStyle(_ sender: NSMenuItem) {
-        Preferences.flakeStyle = sender.tag
-        for snow in screens { snow.flakeStyle = Preferences.flakeStyle }
-        for item in flakeStyleItems { item.state = item.tag == sender.tag ? .on : .off }
     }
 
     @objc private func toggleHalloween() {

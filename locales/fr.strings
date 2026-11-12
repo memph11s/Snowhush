@@ -79,3 +79,16 @@
 "setup.open" = "Ouvrir Snowhush";
 "setup.failed" = "Installation impossible : {error}.";
 "setup.retry" = "Réessayer";
+"settings.window" = "Réglages de Snowhush";
+"settings.open" = "Réglages…";
+"tab.snowfall" = "Chute de neige";
+"tab.drifts" = "Congères";
+"newyear.more" = "Style de guirlande et de flocons…";
+"mixed.about" = "Deux modes tombent à la fois : le dernier choisi et le précédent.";
+"deep.about" = "La neige se pose aussi sur un rectangle de sélection sur le bureau.";
+"performance.about" = "Dessine à la fréquence maximale de l'écran. Plus fluide, mais consomme plus d'énergie.";
+"newyear.decor.about" = "Boules, cadeaux et un bonhomme de neige avec un panneau dans la neige en bas de l'écran.";
+"icicles.about" = "Poussent sous les bords inférieurs des fenêtres et gouttent de temps en temps.";
+"storm.about" = "Vent fort en rafales : la neige vole en biais et est soufflée des congères.";
+"snowmen.howto" = "Maintenez ⌥ Option et passez le pointeur dans la neige pour rouler une boule qui grossit. Relâchez Option pour la laisser. Faites glisser une boule à la souris ou lancez-la. Posez une petite boule sur une plus grosse, puis une troisième dessus : voilà un bonhomme de neige.";
+"settings.doubleclick" = "Double-cliquez sur l'icône de Snowhush dans la barre des menus, ou choisissez Réglages… dans son menu, pour ouvrir cette fenêtre.";

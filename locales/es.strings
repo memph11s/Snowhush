@@ -79,3 +79,16 @@
 "setup.open" = "Abrir Snowhush";
 "setup.failed" = "No se pudo instalar: {error}.";
 "setup.retry" = "Reintentar";
+"settings.window" = "Ajustes de Snowhush";
+"settings.open" = "Ajustes…";
+"tab.snowfall" = "Nevada";
+"tab.drifts" = "Montones";
+"newyear.more" = "Estilo de guirnalda y copos…";
+"mixed.about" = "Caen dos modos a la vez: el último elegido y el anterior.";
+"deep.about" = "La nieve también se posa sobre un rectángulo de selección en el escritorio.";
+"performance.about" = "Dibuja a la frecuencia completa de la pantalla. Más fluido, pero gasta más energía.";
+"newyear.decor.about" = "Bolas, regalos y un muñeco de nieve con un cartel en la nieve al pie de la pantalla.";
+"icicles.about" = "Crecen bajo los bordes inferiores de las ventanas y a veces gotean.";
+"storm.about" = "Viento fuerte a ráfagas: la nieve cae inclinada y vuela de los montones.";
+"snowmen.howto" = "Mantén ⌥ Opción y mueve el puntero por la nieve para hacer rodar una bola que crece. Suelta Opción para dejarla. Arrastra una bola con el ratón o lánzala. Pon una bola más pequeña sobre otra mayor y una tercera encima para hacer un muñeco de nieve.";
+"settings.doubleclick" = "Haz doble clic en el icono de Snowhush en la barra de menús, o elige Ajustes… en su menú, para abrir esta ventana.";
