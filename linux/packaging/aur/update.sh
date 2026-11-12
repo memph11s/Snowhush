@@ -6,7 +6,7 @@ set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
 version=${1:?usage: update.sh <version>}
-tarball=https://github.com/mbezruchko/Snowhush/releases/download/v$version/snowhush-linux-x86_64.tar.gz
+tarball=https://github.com/memph11s/Snowhush/releases/download/v$version/snowhush-linux-x86_64.tar.gz
 sum=$(curl -fsSL "$tarball" | shasum -a 256 | cut -d' ' -f1)
 sed -i.old -e "s/^pkgver=.*/pkgver=$version/" -e "s/^pkgrel=.*/pkgrel=1/" -e "s/^sha256sums=.*/sha256sums=('$sum')/" "$here/PKGBUILD"
 rm "$here/PKGBUILD.old"

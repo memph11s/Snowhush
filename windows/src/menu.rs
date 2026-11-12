@@ -166,11 +166,6 @@ impl Entry {
         Entry::Item { id, label: label.to_string(), checked, enabled, radio: false, keep_open: false, heart: false }
     }
 
-    /// An item with the sponsor heart ahead of its label.
-    pub fn loved(id: u32, label: &str) -> Entry {
-        Entry::Item { id, label: label.to_string(), checked: false, enabled: true, radio: false, keep_open: false, heart: true }
-    }
-
     pub fn toggle(id: u32, label: &str, checked: bool, enabled: bool) -> Entry {
         Entry::Item { id, label: label.to_string(), checked, enabled, radio: false, keep_open: true, heart: false }
     }

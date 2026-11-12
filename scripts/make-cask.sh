@@ -8,10 +8,10 @@ cask "snowhush" do
   version "$version"
   sha256 "$sha"
 
-  url "https://github.com/mbezruchko/Snowhush/releases/download/v#{version}/Snowhush.dmg"
+  url "https://github.com/memph11s/Snowhush/releases/download/v#{version}/Snowhush.dmg"
   name "Snowhush"
   desc "Soft snow that falls, drifts and settles on the desktop"
-  homepage "https://snowhush.app/"
+  homepage "https://github.com/memph11s/Snowhush"
 
   livecheck do
     url :url
@@ -23,13 +23,13 @@ cask "snowhush" do
 
   app "Snowhush.app"
 
-  uninstall quit: "com.mbezruchko.Snowhush"
+  uninstall quit: "com.memph11s.Snowhush"
 
   zap trash: [
-    "~/Library/Caches/com.mbezruchko.Snowhush",
-    "~/Library/HTTPStorages/com.mbezruchko.Snowhush",
-    "~/Library/HTTPStorages/com.mbezruchko.Snowhush.binarycookies",
-    "~/Library/Preferences/com.mbezruchko.Snowhush.plist",
+    "~/Library/Caches/com.memph11s.Snowhush",
+    "~/Library/HTTPStorages/com.memph11s.Snowhush",
+    "~/Library/HTTPStorages/com.memph11s.Snowhush.binarycookies",
+    "~/Library/Preferences/com.memph11s.Snowhush.plist",
   ]
 end
 CASK

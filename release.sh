@@ -4,7 +4,7 @@
 # appcast.xml, which the app reads from the latest release to find updates,
 # and Snowhush-Setup.exe for Windows, whose app looks for it on the latest release to find updates.
 # Once it is published, GitHub Actions adds the Linux packages to it: .github/workflows/release.yml.
-# When the Homebrew tap repository exists (HOMEBREW_TAP, default mbezruchko/homebrew-tap), its cask follows along.
+# When the Homebrew tap repository exists (HOMEBREW_TAP, default memph11s/homebrew-tap), its cask follows along.
 #
 # Usage: ./release.sh <version> [notes]
 # Needs: a "Developer ID Application" identity, a notarytool keychain profile (NOTARY_PROFILE, default "snowhush"),
@@ -14,7 +14,7 @@ cd "$(dirname "$0")"
 
 version=${1:?usage: ./release.sh <version> [notes]}
 notes=${2:-"Snowhush $version"}
-repository=mbezruchko/Snowhush
+repository=memph11s/Snowhush
 profile=${NOTARY_PROFILE:-snowhush}
 sparkle_version=2.10.0
 dmgbuild_version=1.6.7
@@ -109,7 +109,7 @@ gh release create "v$version" "$dist/Snowhush.dmg" "$dist/appcast/appcast.xml" "
 echo "Released https://github.com/$repository/releases/tag/v$version"
 echo "GitHub Actions is adding the Linux packages; once they are there, linux/packaging/aur/update.sh $version brings the AUR package along."
 
-tap_repository=${HOMEBREW_TAP:-mbezruchko/homebrew-tap}
+tap_repository=${HOMEBREW_TAP:-memph11s/homebrew-tap}
 if gh repo view "$tap_repository" >/dev/null 2>&1; then
     echo "Updating the Homebrew cask…"
     tap=$(mktemp -d)

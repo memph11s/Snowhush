@@ -2,9 +2,9 @@
 // Snowhush loads this script into KWin when it starts and unloads it when it quits; it puts
 // APP_PID and SHOW_IN_SCREENSHOTS in front of it.
 
-const SERVICE = "io.github.mbezruchko.Snowhush";
-const PATH = "/io/github/mbezruchko/Snowhush";
-const INTERFACE = "io.github.mbezruchko.Snowhush.KWin";
+const SERVICE = "io.github.memph11s.Snowhush";
+const PATH = "/io/github/memph11s/Snowhush";
+const INTERFACE = "io.github.memph11s.Snowhush.KWin";
 
 // Calls in a row that went unanswered, across both senders.
 let unanswered = 0;

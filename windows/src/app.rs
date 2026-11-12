@@ -57,7 +57,6 @@ const ID_RAIN: u32 = 213;
 const ID_MAX_PERFORMANCE: u32 = 215;
 const ID_DEEP: u32 = 216;
 const ID_BLOSSOM: u32 = 217;
-const ID_SPONSOR: u32 = 218;
 const ID_MIXED: u32 = 219;
 const ID_GROUND: u32 = 220;
 const ID_OPACITY_FOLD: u32 = 221;
@@ -67,7 +66,6 @@ const OPACITY_STEPS: u32 = 19;
 /// The system's menu can't hold a slider: its Opacity submenu offers these, in percent.
 const OPACITY_STOPS: [u32; 5] = [100, 80, 60, 40, 20];
 
-const SPONSORS: &str = "https://github.com/sponsors/mbezruchko";
 const TIMER_WELCOME: usize = 1;
 const TIMER_UPDATES: usize = 2;
 const TIMER_HALLOWEEN: usize = 3;
@@ -445,7 +443,6 @@ fn entries(settings: &Settings, login: bool, sliders: bool) -> Vec<Entry> {
     entries.extend([
         Entry::Separator,
         Entry::Submenu { label: tr("settings").to_string(), entries: options },
-        Entry::loved(ID_SPONSOR, tr("support")),
         Entry::item(ID_QUIT, tr("quit"), false, true),
     ]);
     entries
@@ -533,7 +530,6 @@ fn choose(window: HWND, chosen: u32, login: bool) {
         0 => {}
         ID_QUIT => quit(window),
         ID_UPDATES => check_for_updates(window, true),
-        ID_SPONSOR => update::open(SPONSORS),
         ID_CLEAR => APP.with_borrow(|app| {
             if let Some(app) = app {
                 send(app, Command::ClearSnow(!prefs::animations_enabled()));

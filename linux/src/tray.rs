@@ -40,7 +40,6 @@ const MODES: [Mode; 4] = [Mode::Snow, Mode::Autumn, Mode::Rain, Mode::Blossom];
 /// The panel's menu can't hold a slider: Intensity and Opacity offer these, in percent.
 const INTENSITY_STOPS: [u32; 5] = [0, 25, 50, 75, 100];
 const OPACITY_STOPS: [u32; 5] = [100, 80, 60, 40, 20];
-const SPONSORS: &str = "https://github.com/sponsors/mbezruchko";
 
 pub struct Tray {
     settings: Settings,
@@ -368,7 +367,6 @@ impl ksni::Tray for Tray {
                 ..Default::default()
             }
             .into(),
-            StandardItem { label: tr("support").into(), activate: Box::new(|_: &mut Tray| open(SPONSORS)), ..Default::default() }.into(),
             StandardItem {
                 label: tr("quit").into(),
                 icon_name: "application-exit".into(),
@@ -379,15 +377,6 @@ impl ksni::Tray for Tray {
             }
             .into(),
         ]
-    }
-}
-
-fn open(url: &str) {
-    match std::process::Command::new("xdg-open").arg(url).spawn() {
-        Ok(mut child) => {
-            std::thread::spawn(move || child.wait());
-        }
-        Err(error) => log!("xdg-open {url}: {error}"),
     }
 }
 

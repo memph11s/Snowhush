@@ -6,7 +6,7 @@ Version:        %{snowhush_version}
 Release:        1
 Summary:        Snow on your Wayland desktop
 License:        PolyForm-Noncommercial-1.0.0
-URL:            https://github.com/mbezruchko/Snowhush
+URL:            https://github.com/memph11s/Snowhush
 ExclusiveArch:  x86_64
 # Loaded while running, so the automatic requirements miss it.
 Requires:       libEGL.so.1()(64bit)

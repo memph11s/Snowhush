@@ -4,7 +4,7 @@ import AppKit
 /// turned on from the menu.
 enum Halloween {
     /// Whether it is Halloween, wanted or not.
-    /// Lets it be previewed on any day: defaults write com.mbezruchko.Snowhush previewHalloween -bool true
+    /// Lets it be previewed on any day: defaults write com.memph11s.Snowhush previewHalloween -bool true
     static func isSeason(at date: Date = Date()) -> Bool {
         if UserDefaults.standard.bool(forKey: "previewHalloween") { return true }
         let parts = Calendar.current.dateComponents([.month, .day, .hour], from: date)

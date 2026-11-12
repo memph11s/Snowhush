@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Snowhush — Nikita Edition</string>
+	<string>Snowhush</string>
 	<key>CFBundleExecutable</key>
 	<string>Snowhush</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.mbezruchko.Snowhush</string>
+	<string>com.memph11s.Snowhush</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Snowhush — Nikita Edition</string>
+	<string>Snowhush</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -31,13 +31,13 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 Mykhailo Bezruchko</string>
+	<string>© 2026 Nikita</string>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
-	<string>https://github.com/mbezruchko/Snowhush/releases/latest/download/appcast.xml</string>
+	<string>https://github.com/memph11s/Snowhush/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>/KbuA1HrrJLBf08pYzI8VbEPqYsbLAwDSLEF9bWlBqY=</string>
 </dict>

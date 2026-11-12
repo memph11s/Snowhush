@@ -12,8 +12,8 @@ use crate::log;
 use crate::prefs;
 use crate::source::{Report, Shared};
 
-pub const SERVICE: &str = "io.github.mbezruchko.Snowhush";
-const PATH: &str = "/io/github/mbezruchko/Snowhush";
+pub const SERVICE: &str = "io.github.memph11s.Snowhush";
+const PATH: &str = "/io/github/memph11s/Snowhush";
 const SCRIPT: &str = include_str!("snowhush.js");
 const PLUGIN: &str = "snowhush";
 /// KWin's effects that animate a switch between desktops.
@@ -60,7 +60,7 @@ impl Slide {
     }
 }
 
-#[zbus::interface(name = "io.github.mbezruchko.Snowhush.KWin")]
+#[zbus::interface(name = "io.github.memph11s.Snowhush.KWin")]
 impl Reports {
     fn cursor(&self, position: &str) {
         let mut parts = position.split(' ').map(|part| part.parse::<f32>());

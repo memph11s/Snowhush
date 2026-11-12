@@ -1,90 +1,161 @@
 <p align="center">
-  <a href="https://snowhush.app"><img src="site/assets/icon-512.png" width="128" height="128" alt="Snowhush icon"></a>
+  <img src="site/assets/icon-512.png" width="128" height="128" alt="Иконка Snowhush">
 </p>
 
-<h1 align="center">Snowhush — Nikita Edition</h1>
+<h1 align="center">Snowhush</h1>
 
-<p align="center">Персональный форк <a href="https://github.com/mbezruchko/Snowhush">Snowhush</a> с более спокойным снегопадом по умолчанию.</p>
-
-## Что изменено в этой версии
-
-- Видимое название приложения — **Snowhush — Nikita Edition**.
-- Стандартная интенсивность снегопада снижена с 50% до 35%, чтобы снег меньше отвлекал от работы.
-- Оригинальная физика, режимы погоды и настройки сохранены.
-
-Исходный проект разработан [Mykhailo Bezruchko](https://github.com/mbezruchko). Этот репозиторий содержит персональные изменения поверх авторской версии, а не независимую реализацию. Ниже сохранена оригинальная документация; ссылки на готовые релизы ведут к версии автора.
-
----
-
-<p align="center">It's snowing on your desktop.</p>
+<p align="center">На вашем рабочем столе идёт снег.</p>
 
 <p align="center">
-  <a href="https://github.com/mbezruchko/Snowhush/releases/latest/download/Snowhush.dmg"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/macos-dark.svg"><img src=".github/readme/macos-light.svg" width="20" height="16" align="absmiddle" alt=""></picture><b>Download for macOS</b></a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/mbezruchko/Snowhush/releases/latest/download/Snowhush-Setup.exe"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/windows-dark.svg"><img src=".github/readme/windows-light.svg" width="20" height="16" align="absmiddle" alt=""></picture><b>Download for Windows</b></a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/mbezruchko/Snowhush/releases/latest/download/Snowhush-x86_64.AppImage"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/linux-dark.svg"><img src=".github/readme/linux-light.svg" width="20" height="16" align="absmiddle" alt=""></picture><b>Download for Linux</b></a>
-  &nbsp;·&nbsp;
-  <a href="https://snowhush.app"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/link-dark.svg"><img src=".github/readme/link-light.svg" width="20" height="16" align="absmiddle" alt=""></picture>snowhush.app</a>
-  <br>
-  <sub>macOS 14 or later · Windows 10 or 11 · Linux with KDE Plasma 6, Hyprland, Sway or niri · free, source available</sub>
+  <sub>macOS 14 и новее · Windows 10 и 11 · Linux с KDE Plasma 6, Hyprland, Sway или niri</sub>
 </p>
 
-https://github.com/user-attachments/assets/291c3cd5-3563-4b86-8b66-dfd924f980fc
+Маленькое приложение, которое живёт в строке меню на macOS и в трее на Windows и Linux. Мягкий снег падает по экрану, ложится на верхние края окон и соскальзывает, когда вы их двигаете. Сугроб можно разгрести курсором.
 
-A tiny app that lives in the menu bar on macOS and in the tray on Windows and Linux. Soft snow drifts across your screen, settles along the tops of your windows and slips off when you drag them. Sweep the drift aside with your cursor.
+## Что умеет снег
 
-## What the snow does
+- **Падает.** Каждая снежинка летит в своём темпе и покачивается на лёгком ветру.
+- **Ложится.** Снег копится и оседает естественным склоном внизу экрана, на любом окне, над которым есть место, и на Dock.
+- **Двигается.** Проведите курсором через сугроб, и он расступится и рассыплется. Потащите или встряхните окно, и снег соскользнёт с него и упадёт ниже.
+- **Падает комьями.** Закройте или сверните окно, и снег с него сразу упадёт комьями, которые рассыпаются в пыль.
+- **Тает.** С включённой опцией «Таяние снега» сугроб медленно тает и не заполняет весь экран.
+- **Прячется.** На скриншотах и при демонстрации экрана снега не видно, если не включить «Показывать на скриншотах».
+- **Экономит ресурсы.** Около 6% одного ядра процессора и 65 МБ памяти, а от батареи или в режиме энергосбережения ещё меньше. Пока экран спит, заблокирован или закрыт другим окном, снег на паузе.
 
-- **Falls.** Every flake keeps its own pace and sways in a slow breeze.
-- **Settles.** It piles up and slumps to a natural slope along the bottom of the screen, on any window with room above it, and on the Dock.
-- **Moves.** Push the cursor through a drift and it parts and sprays. Drag or shake a window and its snow slides off and lands below.
-- **Drops.** Close or minimize a window and its snow drops at once, in lumps that burst into powder where they land.
-- **Melts.** With Melt Snow on, the drift thaws slowly, so it never takes over your screen.
-- **Hides.** Screenshots and screen sharing show your desktop without it, unless you turn on Show in Screenshots.
-- **Rests.** About 6% of one processor core and 65 MB of memory, and less on battery or in Low Power Mode. It pauses while your screen sleeps, locks or is covered.
+## Режимы
 
-## Autumn Leaves
+- **Снег** — режим по умолчанию. Интенсивность по умолчанию 35%, чтобы снег не отвлекал от работы.
+- **Осенние листья.** Вместо снега падают листья: кружатся, ложатся кучами, разлетаются от курсора и слетают с окна, если его встряхнуть. «Таяние» и «Очистка» превращаются в «Увядание листьев» и «Убрать листья».
+- **Дождь.** Капли разбиваются брызгами, а на верхних краях окон, Dock и панели задач стекают как по стеклу: цепляются, сливаются и оставляют мокрый след. Дождь не копится, поэтому «Таяние» и «Очистка» для него недоступны.
+- **Сакура.** Падают розовые лепестки, иногда целый цветок на черешке. Они ложатся кучами, как листья, а с опцией «Увядание лепестков» буреют по краям и исчезают.
+- **Хэллоуин.** С 30 октября до рассвета 1 ноября в сугробах светятся тыквы и выглядывают привидения с табличками. В остальные дни режим можно включить вручную в меню «Режим».
 
-Choose Mode › Autumn Leaves and leaves fall instead of snow. They turn and swing on the way down, settle in heaps you can see are made of leaves, scatter under the cursor and come off a window you shake or drag. Melt Snow and Clear Snow become Wither Leaves and Clear Leaves.
+## Настройки
 
-## Rain
+Всё находится в меню приложения:
 
-Choose Mode › Rain and rain beats down instead of snow, splashing where it lands. On the tops of your windows, the Dock and the taskbar it spatters the glass with spray and sets drops running down it like beads of water on a window: they catch on specks, gather the spray they meet and lurch on, leaving a wet film and a trail of droplets. Others hang under bottom edges until they grow heavy enough to let go. Drag the cursor through them to smear them, or shake or drag a window to throw them off. Rain doesn't pile up, so Melt Snow and Clear Snow step aside, and so does Ground under Accumulate: rain always splashes along the bottom.
+- **Интенсивность** — сколько снега падает.
+- **Непрозрачность** — насколько снег прозрачный.
+- **Накопление** — где снег может лежать: на земле, Dock, окнах и виджетах (macOS), на земле и окнах (Windows), на земле, плавающей панели и окнах (Linux).
+- **Режим** — снег, листья, дождь, сакура, Хэллоуин.
+- **Очистить снег** — убрать всё, что накопилось.
+- **Настройки**: таяние снега, глубокое взаимодействие (снег ложится и на выделение рамкой на рабочем столе), снег позади окон, показ поверх полноэкранных приложений, показ на скриншотах, максимальная производительность (отрисовка с полной частотой дисплея), запуск при входе в систему. На Windows есть ещё «За панелью задач», чтобы снег ложился под прозрачную панель задач (например, сделанную с TranslucentTB).
 
-## Cherry Blossom
+## Как запустить
 
-Choose Mode › Cherry Blossom and pink petals fall instead of snow. Curved like a spoon, they glint as they tumble and glow where the light comes through them, and now and then a whole flower on its stalk spins down. They heap up and scatter just as leaves do, and with Wilt Petals on, the fallen ones brown from their edges before they go. Melt Snow and Clear Snow become Wilt Petals and Clear Petals.
-
-## Halloween
-
-From October 30 until dawn on November 1 the snow turns spooky: jack-o'-lanterns glow in the drift and ghosts pop up out of it with signs. Choose Mode › Halloween to have it any other day, as long as snow is falling.
-
-Everything else lives in the menu bar: an Intensity slider for how much falls, Opacity for how see-through it is, a row showing its value that folds out a slider (on Linux and in the plain Windows menu, both are submenus of steps), Accumulate, which folds out a row of icons for what the snow settles on (the ground, the Dock, windows and desktop widgets on the Mac; the ground and windows on Windows; the ground, a floating panel and windows on Linux, as a submenu), Mode (Snow, Autumn Leaves, Rain, Cherry Blossom, and Halloween on top of snow) and Clear Snow, with the rest under Settings: Melt Snow, Deep Interaction (on Windows and the Mac, the snow also settles on a selection dragged across the desktop), Behind Windows, Show over Full Screen, Show in Screenshots, Max Performance (draws every frame at the display's full rate) and Open at Login. On Windows and the Mac, Settings stays open while you switch its options. On Windows, Behind Taskbar lets the snow settle at the bottom of the screen under a see-through taskbar, such as one made clear with TranslucentTB.
-
-## Building
+Сначала скачайте исходники:
 
 ```sh
-./build.sh            # build/Snowhush.app, signed ad hoc
-open build/Snowhush.app
-windows/build.sh      # dist/Snowhush-Setup.exe, cross-compiled from macOS
+git clone https://github.com/memph11s/Snowhush.git
+cd Snowhush
 ```
+
+### macOS
+
+Нужно:
+
+- macOS 14 Sonoma или новее;
+- Xcode 15 или новее (или Command Line Tools с Swift 5.9+): `xcode-select --install`;
+- интернет при первой сборке, чтобы Swift Package Manager скачал зависимость Sparkle.
+
+Сборка и запуск:
+
+```sh
+./build.sh                 # соберёт build/Snowhush.app (Apple Silicon + Intel)
+open build/Snowhush.app    # запустить
+```
+
+Чтобы установить насовсем, перенесите приложение в «Программы»:
+
+```sh
+cp -R build/Snowhush.app /Applications/
+```
+
+После запуска в строке меню появится значок снежинки, через него открываются все настройки. Приложение подписано локально (ad hoc). Если при запуске копии, перенесённой с другого Mac, macOS скажет, что приложение повреждено или от неизвестного разработчика, выполните:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Snowhush.app
+```
+
+Для сборки с подписью Developer ID передайте идентичность: `IDENTITY="Developer ID Application: …" ./build.sh`.
+
+### Windows
+
+Windows-версия написана на Rust. Её можно собрать прямо на Windows или кросс-компилировать с macOS.
+
+**На Windows.** Нужно:
+
+- [Rust](https://rustup.rs) (stable, 1.85 или новее);
+- Visual Studio Build Tools с компонентом «Разработка классических приложений на C++».
+
+```powershell
+cd windows
+cargo build --release --bin Snowhush
+.\target\release\Snowhush.exe
+```
+
+**На macOS (кросс-компиляция с установщиком).** Нужно один раз подготовить:
+
+```sh
+rustup target add x86_64-pc-windows-msvc
+cargo install cargo-xwin
+```
+
+Затем:
+
+```sh
+windows/build.sh           # соберёт dist/Snowhush-Setup.exe
+```
+
+Получившийся `Snowhush-Setup.exe` скопируйте на Windows и запустите. Значок появится в трее.
 
 ### Linux
 
-`linux/` is a native version for Wayland: KDE Plasma 6, Hyprland, Sway and niri. It shares the snow's physics with the Windows version and draws with OpenGL ES in a layer-shell overlay. Wayland doesn't tell apps where other windows are or where the pointer is, so each compositor is asked in its own way: on KDE, Snowhush loads a small KWin script (`linux/src/snowhush.js`) while it runs, which reports both; Hyprland answers over its IPC socket, which tells both too; Sway and niri answer over theirs, though they don't tell where the pointer is, and niri only where floating windows are, so on niri only those collect snow.
+Работает на Wayland с KDE Plasma 6, Hyprland, Sway и niri. Снег рисуется через OpenGL ES в оверлее layer-shell. Положение окон и курсора берётся у композитора: на KDE через небольшой скрипт KWin (`linux/src/snowhush.js`), на Hyprland, Sway и niri через их IPC. Sway и niri не сообщают положение курсора, а niri сообщает только о плавающих окнах, поэтому на niri снег ложится только на них.
 
-Each release carries an AppImage that runs on any distribution, a `.deb` and an `.rpm`. On Arch, `makepkg -si` in `linux/packaging/aur` installs the release's build as a package. To build it yourself:
+Нужно:
+
+- [Rust](https://rustup.rs) (stable, 1.85 или новее);
+- заголовки Wayland и EGL:
+  - Debian / Ubuntu: `sudo apt install build-essential pkg-config libwayland-dev libegl-dev`
+  - Fedora: `sudo dnf install gcc pkgconf-pkg-config wayland-devel mesa-libEGL-devel`
+  - Arch: `sudo pacman -S base-devel wayland libglvnd`
+
+Сборка и запуск:
 
 ```sh
-cd linux && cargo build --release   # linux/target/release/snowhush
-cd linux/packaging && makepkg -si   # Arch: builds and installs it with its icon and menu entry
+cd linux
+cargo build --release
+./target/release/snowhush
 ```
 
-`linux/bench/run.sh sway|niri|kwin` tries it in a compositor inside a container, without a display.
+На Arch можно собрать и установить пакет с иконкой и пунктом в меню приложений:
 
-Everything lives in the tray, as on Windows. Settings go to `~/.config/snowhush/settings`, Open at Login to `~/.config/autostart/snowhush.desktop`, the log to `~/.local/state/snowhush/snowhush.log`.
+```sh
+cd linux/packaging
+makepkg -si
+```
 
-## License
+Всё управление в трее. Файлы приложения:
 
-[PolyForm Noncommercial 1.0.0](LICENSE): use, share and change Snowhush freely, keeping its copyright notice with it. Selling it, or anything built on its code, isn't allowed. Versions up to 0.6.1 were released under the MIT License.
+- настройки: `~/.config/snowhush/settings`;
+- автозапуск: `~/.config/autostart/snowhush.desktop`;
+- лог: `~/.local/state/snowhush/snowhush.log`.
+
+`linux/bench/run.sh sway|niri|kwin` запускает приложение в композиторе внутри контейнера, без дисплея.
+
+### Веб-версия
+
+В папке `site/` лежит статическая страница с интерактивной демонстрацией. Её можно открыть локально любым статическим сервером:
+
+```sh
+cd site && python3 -m http.server 8000   # затем откройте http://localhost:8000
+```
+
+Чтобы пересобрать движок страницы (`site/engine.wasm`): `rustup target add wasm32-unknown-unknown && site-engine/build.sh`.
+
+## Лицензия
+
+Распространяется на условиях [PolyForm Noncommercial 1.0.0](LICENSE). Код можно свободно использовать, распространять и изменять в некоммерческих целях, сохраняя строки `Required Notice` из файла LICENSE. Продавать программу или продукты на её основе нельзя.
+
+© 2026 Nikita
