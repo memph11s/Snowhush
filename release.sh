@@ -33,7 +33,16 @@ else
 fi
 
 if [[ ! -x "$dmgbuild" ]]; then
-    python3 -m venv .build/dmgbuild
+    # dmgbuild needs Python 3.10 or newer; the one macOS ships is older, so a Homebrew one is preferred.
+    python=python3
+    for candidate in /opt/homebrew/bin/python3 /usr/local/bin/python3 python3.14 python3.13 python3.12 python3.11 python3.10; do
+        if command -v "$candidate" >/dev/null && "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
+            python=$candidate
+            break
+        fi
+    done
+    rm -rf .build/dmgbuild
+    "$python" -m venv .build/dmgbuild
     .build/dmgbuild/bin/pip install -q "dmgbuild==$dmgbuild_version"
 fi
 if [[ ! -x "$tools/bin/generate_appcast" ]]; then
