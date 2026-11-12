@@ -13,6 +13,16 @@
 "storm" = "吹雪";
 "garland" = "イルミネーション";
 "garland.blinks" = "点滅";
+"snowmen" = "雪だるま";
+"snowmen.hint" = "⌥ + ポインタで雪玉を転がす";
+"garland.style" = "イルミネーションの種類";
+"garland.style.bulbs" = "カラー電球";
+"garland.style.fairy" = "暖かい光";
+"garland.style.stars" = "星";
+"flakes.style" = "雪の結晶";
+"flakes.style.soft" = "やわらか";
+"flakes.style.crystals" = "結晶";
+"flakes.style.big" = "ぼたん雪";
 "icicles" = "つらら";
 "newyear.sign" = "あけましておめでとう！";
 "settings" = "設定";

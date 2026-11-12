@@ -13,6 +13,16 @@
 "storm" = "Schneesturm";
 "garland" = "Lichterkette";
 "garland.blinks" = "Blinken";
+"snowmen" = "Schneemänner";
+"snowmen.hint" = "⌥ + Zeiger durch Schnee rollt eine Kugel";
+"garland.style" = "Lichterkette: Stil";
+"garland.style.bulbs" = "Bunte Birnen";
+"garland.style.fairy" = "Warme Lichter";
+"garland.style.stars" = "Sterne";
+"flakes.style" = "Schneeflocken";
+"flakes.style.soft" = "Weich";
+"flakes.style.crystals" = "Kristalle";
+"flakes.style.big" = "Große Flocken";
 "icicles" = "Eiszapfen";
 "newyear.sign" = "Frohes neues Jahr!";
 "settings" = "Einstellungen";

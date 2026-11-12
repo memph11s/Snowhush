@@ -26,6 +26,8 @@ struct Uniforms {
     var shake = SIMD4<Float>(0, 0, 0, 0)
     /// The pumpkins' candles: where each burns, how far its light reaches and how bright it is.
     var pumpkins = (SIMD4<Float>(0, 0, 0, 0), SIMD4<Float>(0, 0, 0, 0), SIMD4<Float>(0, 0, 0, 0))
+    /// How the falling flakes look: 0 soft round, 1 crystals, 2 big ragged flakes.
+    var flakeStyle: Float = 0
 }
 
 struct PumpkinUniforms {
@@ -285,6 +287,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         uniforms.autumn = simulation.leafy ? 1 : 0
         uniforms.blossom = simulation.leafy && simulation.modes.contains(.blossom) ? 1 : 0
         uniforms.wilt = simulation.thaws && simulation.accumulates ? 1 : 0
+        uniforms.flakeStyle = Float(simulation.flakeStyle)
         let pumpkins = simulation.pumpkins
         let candles = pumpkins.prefix(3).map { pumpkin in
             let height = pumpkin.width * HalloweenPumpkin.aspect
@@ -298,7 +301,7 @@ final class Renderer: NSObject, MTKViewDelegate {
 
         let glass = sprites > 0 && simulation.hasGlassDrops ? encodeField(sprites: spriteBuffer, count: sprites, into: commandBuffer, matching: pass, uniforms: uniforms) : nil
         if !simulation.hasGlassDrops { field = nil }
-        let standing = simulation.groundDecor, hanging = simulation.hangingDecor
+        let standing = simulation.groundDecor, hanging = simulation.lumpDecor + simulation.hangingDecor
         let decor = writeDecor(standing + hanging, slot: index)
         guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return }
         drawPumpkins(pumpkins, with: encoder, uniforms: uniforms)

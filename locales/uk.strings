@@ -13,6 +13,16 @@
 "storm" = "Хуртовина";
 "garland" = "Гірлянда";
 "garland.blinks" = "Миготіння";
+"snowmen" = "Сніговики";
+"snowmen.hint" = "⌥ + курсор по снігу — ліпити грудку";
+"garland.style" = "Вигляд гірлянди";
+"garland.style.bulbs" = "Кольорові лампочки";
+"garland.style.fairy" = "Теплі вогники";
+"garland.style.stars" = "Зірки";
+"flakes.style" = "Сніжинки";
+"flakes.style.soft" = "М'які";
+"flakes.style.crystals" = "Кристали";
+"flakes.style.big" = "Пластівці";
 "icicles" = "Бурульки";
 "newyear.sign" = "З Новим роком!";
 "settings" = "Налаштування";

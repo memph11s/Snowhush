@@ -41,6 +41,10 @@ struct DecorUniforms {
 enum NewYear {
     enum Picture: Hashable {
         case wire, ball(Int), gift(Int), snowman, sign, bulb, halo, icicle, drop
+        /// A rolled snowball, its lumps of snow turning with it, and what makes three of them a snowman.
+        case lump, lumpTexture(Int), twig, buttons, scarf, face, hat
+        /// The garland's other lights: a small round fairy light and a star.
+        case fairy, star
     }
 
     /// An ornament sitting in the drift at the bottom of the screen: how far it is from the right edge, or from the
@@ -82,6 +86,13 @@ enum NewYear {
         case .halo: return CGSize(width: 40, height: 40)
         case .icicle: return CGSize(width: 12, height: 48)
         case .drop: return CGSize(width: 6, height: 8)
+        case .lump, .lumpTexture, .face: return CGSize(width: 64, height: 64)
+        case .twig: return CGSize(width: 50, height: 30)
+        case .buttons: return CGSize(width: 12, height: 44)
+        case .scarf: return CGSize(width: 64, height: 38)
+        case .hat: return CGSize(width: 48, height: 38)
+        case .fairy: return CGSize(width: 8, height: 8)
+        case .star: return CGSize(width: 20, height: 20)
         }
     }
 
@@ -125,6 +136,15 @@ enum NewYear {
         case .halo: drawHalo()
         case .icicle: drawIcicle()
         case .drop: drawDrop()
+        case .lump: drawLump()
+        case .lumpTexture(let k): drawLumpTexture(seed: k)
+        case .twig: drawTwig()
+        case .buttons: drawButtons()
+        case .scarf: drawScarf()
+        case .face: drawFace()
+        case .hat: drawHat()
+        case .fairy: drawFairy()
+        case .star: drawStar()
         }
         return context
     }
@@ -351,5 +371,136 @@ enum NewYear {
     private static func drawDrop() {
         let drop = NSBezierPath(ovalIn: NSRect(x: 1, y: 0.5, width: 4, height: 6))
         NSGradient(colors: [rgb(1, 1, 1, 0.95), rgb(0.7, 0.85, 1, 0.75)])?.draw(in: drop, relativeCenterPosition: NSPoint(x: -0.3, y: 0.3))
+    }
+
+    // MARK: - Snowballs and snowmen
+
+    /// A ball of packed snow, lit from the upper left, darker toward its foot.
+    private static func drawLump() {
+        let ball = NSBezierPath(ovalIn: NSRect(x: 1.2, y: 1.2, width: 61.6, height: 61.6))
+        NSGradient(colors: [rgb(1, 1, 1), rgb(0.95, 0.96, 0.99), rgb(0.8, 0.85, 0.93), rgb(0.66, 0.73, 0.85)],
+                   atLocations: [0, 0.35, 0.8, 1], colorSpace: .sRGB)?
+            .draw(in: ball, relativeCenterPosition: NSPoint(x: -0.35, y: 0.4))
+        rgb(0.62, 0.7, 0.84, 0.8).setStroke()
+        ball.lineWidth = 0.8
+        ball.stroke()
+    }
+
+    /// The lumps and hollows on a ball, faint, turned with it as it rolls.
+    private static func drawLumpTexture(seed: Int) {
+        let clip = NSBezierPath(ovalIn: NSRect(x: 1.5, y: 1.5, width: 61, height: 61))
+        NSGraphicsContext.saveGraphicsState()
+        clip.addClip()
+        for k in 0..<26 {
+            let a = CGFloat(noise(UInt32(k), UInt32(seed + 11))) * 2 * .pi
+            let d = CGFloat(noise(UInt32(k), UInt32(seed + 23))).squareRoot() * 28
+            let size = 3 + CGFloat(noise(UInt32(k), UInt32(seed + 37))) * 7
+            let center = NSPoint(x: 32 + cos(a) * d, y: 32 + sin(a) * d)
+            let dark = k % 3 != 0
+            (dark ? rgb(0.55, 0.62, 0.76, 0.16) : rgb(1, 1, 1, 0.5)).setFill()
+            NSBezierPath(ovalIn: NSRect(x: center.x - size / 2, y: center.y - size / 3, width: size, height: size * 0.66)).fill()
+        }
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    /// A twig arm from the shoulder at the left to its forked tip at the right.
+    private static func drawTwig() {
+        rgb(0.4, 0.25, 0.13).setStroke()
+        let arm = NSBezierPath()
+        arm.move(to: NSPoint(x: 1, y: 6))
+        arm.curve(to: NSPoint(x: 48, y: 20), controlPoint1: NSPoint(x: 16, y: 8), controlPoint2: NSPoint(x: 32, y: 16))
+        arm.lineWidth = 2.6
+        arm.lineCapStyle = .round
+        arm.stroke()
+        for (from, to) in [(NSPoint(x: 34, y: 15.5), NSPoint(x: 41, y: 28)), (NSPoint(x: 42, y: 18.5), NSPoint(x: 49, y: 13))] {
+            let twig = NSBezierPath()
+            twig.move(to: from)
+            twig.line(to: to)
+            twig.lineWidth = 1.7
+            twig.lineCapStyle = .round
+            twig.stroke()
+        }
+    }
+
+    private static func drawButtons() {
+        for y in [CGFloat(4), 18, 32] {
+            let coal = NSBezierPath(ovalIn: NSRect(x: 1, y: y, width: 9, height: 8.5))
+            NSGradient(colors: [rgb(0.32, 0.32, 0.34), rgb(0.06, 0.06, 0.07)])?.draw(in: coal, relativeCenterPosition: NSPoint(x: -0.4, y: 0.4))
+        }
+    }
+
+    /// Coal eyes and smile, a carrot for a nose.
+    private static func drawFace() {
+        for x in [CGFloat(22), 40] {
+            let eye = NSBezierPath(ovalIn: NSRect(x: x - 3.6, y: 37, width: 7.2, height: 7.6))
+            NSGradient(colors: [rgb(0.3, 0.3, 0.33), rgb(0.05, 0.05, 0.06)])?.draw(in: eye, relativeCenterPosition: NSPoint(x: -0.4, y: 0.4))
+        }
+        rgb(0.08, 0.08, 0.09).setFill()
+        for k in 0..<6 {
+            let u = CGFloat(k) / 5
+            let x = 19 + u * 24, y = 20 - sin(u * .pi) * 5
+            NSBezierPath(ovalIn: NSRect(x: x - 1.9, y: y - 1.9, width: 3.8, height: 3.8)).fill()
+        }
+        let nose = NSBezierPath()
+        nose.move(to: NSPoint(x: 31, y: 34.5))
+        nose.line(to: NSPoint(x: 56, y: 28))
+        nose.line(to: NSPoint(x: 31, y: 27))
+        nose.close()
+        NSGradient(colors: [rgb(1, 0.6, 0.18), rgb(0.9, 0.38, 0.06)])?.draw(in: nose, angle: -90)
+        rgb(0.7, 0.3, 0.05, 0.6).setStroke()
+        for x in [CGFloat(38), 45] {
+            let line = NSBezierPath()
+            line.move(to: NSPoint(x: x, y: 33.5 - (x - 31) * 0.26))
+            line.line(to: NSPoint(x: x + 1, y: 27.5 + (x - 31) * 0.02))
+            line.lineWidth = 0.7
+            line.stroke()
+        }
+    }
+
+    /// A red knitted scarf round the neck, its end hanging down one side.
+    private static func drawScarf() {
+        let red = rgb(0.84, 0.12, 0.16), dark = rgb(0.6, 0.06, 0.1)
+        let tail = NSBezierPath(roundedRect: NSRect(x: 38, y: 1, width: 11, height: 26), xRadius: 3, yRadius: 3)
+        NSGradient(colors: [red, dark])?.draw(in: tail, angle: 0)
+        rgb(1, 1, 1, 0.6).setFill()
+        for y in [CGFloat(6), 12] { NSBezierPath(rect: NSRect(x: 38, y: y, width: 11, height: 2.4)).fill() }
+        let band = NSBezierPath(roundedRect: NSRect(x: 4, y: 22, width: 56, height: 13), xRadius: 6.5, yRadius: 6.5)
+        NSGradient(colors: [rgb(0.95, 0.25, 0.25), red, dark], atLocations: [0, 0.5, 1], colorSpace: .sRGB)?.draw(in: band, angle: -90)
+        rgb(1, 1, 1, 0.55).setFill()
+        for x in stride(from: CGFloat(10), to: 58, by: 9) { NSBezierPath(rect: NSRect(x: x, y: 22.5, width: 2.4, height: 12)).fill() }
+    }
+
+    /// A black top hat with a red band.
+    private static func drawHat() {
+        let brim = NSBezierPath(roundedRect: NSRect(x: 1, y: 1, width: 46, height: 7), xRadius: 3.5, yRadius: 3.5)
+        let crown = NSBezierPath(roundedRect: NSRect(x: 9, y: 5, width: 30, height: 32), xRadius: 3, yRadius: 3)
+        NSGradient(colors: [rgb(0.25, 0.25, 0.28), rgb(0.08, 0.08, 0.1)])?.draw(in: crown, angle: 0)
+        NSGradient(colors: [rgb(0.22, 0.22, 0.25), rgb(0.06, 0.06, 0.08)])?.draw(in: brim, angle: -90)
+        rgb(0.78, 0.1, 0.14).setFill()
+        NSBezierPath(rect: NSRect(x: 9, y: 9, width: 30, height: 5.5)).fill()
+        rgb(0.97, 0.98, 1).setFill()
+        NSBezierPath(ovalIn: NSRect(x: 12, y: 33.5, width: 24, height: 4.5)).fill()
+    }
+
+    /// A small round light, white to be tinted as it is drawn.
+    private static func drawFairy() {
+        NSGradient(colors: [rgb(1, 1, 1), rgb(1, 1, 1), rgb(0.75, 0.75, 0.75)], atLocations: [0, 0.4, 1], colorSpace: .sRGB)?
+            .draw(in: NSBezierPath(ovalIn: NSRect(x: 0.5, y: 0.5, width: 7, height: 7)), relativeCenterPosition: NSPoint(x: -0.2, y: 0.2))
+    }
+
+    /// A five-pointed star, white to be tinted as it is drawn, hung from its top point.
+    private static func drawStar() {
+        let star = NSBezierPath()
+        for k in 0..<10 {
+            let a = CGFloat.pi / 2 + CGFloat(k) * .pi / 5
+            let r: CGFloat = k % 2 == 0 ? 9.5 : 4
+            let point = NSPoint(x: 10 + cos(a) * r, y: 9.6 + sin(a) * r)
+            if k == 0 { star.move(to: point) } else { star.line(to: point) }
+        }
+        star.close()
+        NSGradient(colors: [rgb(1, 1, 1), rgb(0.82, 0.82, 0.82)])?.draw(in: star, relativeCenterPosition: NSPoint(x: -0.3, y: 0.3))
+        rgb(0.6, 0.6, 0.6).setStroke()
+        star.lineWidth = 0.5
+        star.stroke()
     }
 }

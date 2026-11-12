@@ -21,6 +21,7 @@ struct Uniforms {
     float4 lantern;
     float4 shake;
     float4 pumpkins[3];
+    float flakeStyle;
 };
 
 struct Sprite {
@@ -648,7 +649,9 @@ static SpriteOut sprite(uint vid, const device Sprite *sprites, constant Uniform
         out.turnSmear = s.turnSpeed;
         return out;
     }
-    float pixels = s.size * u.scale;
+    // Crystals and big flakes are drawn larger than the soft round ones, so their shape reads.
+    bool styled = s.lump == 0.0 && s.ghost == 0.0 && u.flakeStyle > 0.5 && u.autumn < 0.5;
+    float pixels = s.size * u.scale * (styled ? (u.flakeStyle < 1.5 ? 2.2 : 1.7) : 1.0);
     // About a 1/55 s exposure, capped so even the fastest grain stays a short smear and never reads as rain.
     float2 travel = s.velocity * 0.018;
     float smear = min(length(travel), s.size * (s.lump > 0.0 ? 1.2 : 2.2));
@@ -668,6 +671,12 @@ static SpriteOut sprite(uint vid, const device Sprite *sprites, constant Uniform
     out.light = u.light.rgb;
     out.lump = s.lump;
     out.spin = s.lump > 0.0 ? u.time * (s.lump - 0.5) * 9.0 + s.lump * 40.0 : 0.0;
+    if (styled) {
+        // Each flake its own turn, slowly turning as it falls; its seed rides in `lump` as a negative number.
+        float seed = fract(s.size * 37.17);
+        out.spin = seed * 6.2832 + u.time * (seed - 0.5) * 1.6;
+        out.lump = -(u.flakeStyle < 1.5 ? 1.0 : 2.0) - seed * 0.5;
+    }
     out.warm = candlelight(u, s.position);
     out.ghost = s.ghost;
     if (s.ghost > 0.0) {
@@ -1068,7 +1077,27 @@ fragment float4 spriteFragment(SpriteVaryings v [[stage_in]], float2 coord [[poi
     float2 d = p - half_ * t;
     float r = length(d) / max(in.radius, 0.001);
     float shading = 0.0;
-    if (in.lump > 0.0) {
+    if (in.lump < -0.5) {
+        float angle = atan2(d.y, d.x) + in.spin;
+        if (in.lump > -1.75) {
+            // A crystal: six arms, each with a pair of side branches, round a small hexagonal core.
+            float sector = abs(fract(angle / 1.0472 + 0.5) - 0.5) * 1.0472;
+            float2 q = float2(cos(sector), sin(sector)) * (length(d) / max(in.radius, 0.001));
+            float arm = max(abs(q.y) - 0.13 * (1.0 - q.x * 0.5), q.x - 1.0);
+            float2 b = q - float2(0.55, 0.0);
+            float2 dir = float2(0.5, 0.866);
+            float along = clamp(dot(b, dir), 0.0, 0.32);
+            float branch = length(b - dir * along) - 0.09;
+            float core = length(q) - 0.3;
+            float shape = min(min(arm, branch), core);
+            r = 1.0 + shape * 7.0;
+            shading = 0.0;
+        } else {
+            // A big flake: a soft, ragged clump of crystals stuck together.
+            r /= 1.0 + 0.16 * sin(5.0 * angle) + 0.1 * sin(3.0 * angle + in.lump * 17.0) + 0.06 * sin(7.0 * angle - in.spin);
+            shading = saturate(dot(d / max(in.radius, 0.001), float2(0.45, -0.6))) * 0.25;
+        }
+    } else if (in.lump > 0.0) {
         float angle = atan2(d.y, d.x) + in.spin;
         r /= 1.0 + 0.14 * sin(3.0 * angle) + 0.08 * sin(5.0 * angle + in.lump * 21.0) + 0.05 * sin(2.0 * angle + in.lump * 9.0);
         shading = saturate(dot(d / max(in.radius, 0.001), float2(0.45, -0.6))) * 0.4;

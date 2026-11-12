@@ -13,6 +13,16 @@
 "storm" = "Tempête de neige";
 "garland" = "Guirlande";
 "garland.blinks" = "Clignotement";
+"snowmen" = "Bonshommes de neige";
+"snowmen.hint" = "⌥ + pointeur dans la neige roule une boule";
+"garland.style" = "Style de guirlande";
+"garland.style.bulbs" = "Ampoules colorées";
+"garland.style.fairy" = "Lumières chaudes";
+"garland.style.stars" = "Étoiles";
+"flakes.style" = "Flocons";
+"flakes.style.soft" = "Doux";
+"flakes.style.crystals" = "Cristaux";
+"flakes.style.big" = "Gros flocons";
 "icicles" = "Stalactites de glace";
 "newyear.sign" = "Bonne année !";
 "settings" = "Réglages";

@@ -16,6 +16,16 @@
 "storm" = "Snowstorm";
 "garland" = "Garland";
 "garland.blinks" = "Blinking";
+"snowmen" = "Snowmen";
+"snowmen.hint" = "⌥ + pointer through snow rolls a ball";
+"garland.style" = "Garland style";
+"garland.style.bulbs" = "Colored bulbs";
+"garland.style.fairy" = "Warm fairy lights";
+"garland.style.stars" = "Stars";
+"flakes.style" = "Snowflakes";
+"flakes.style.soft" = "Soft";
+"flakes.style.crystals" = "Crystals";
+"flakes.style.big" = "Big flakes";
 "icicles" = "Icicles";
 "newyear.sign" = "Happy New Year!";
 "settings" = "Settings";

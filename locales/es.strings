@@ -13,6 +13,16 @@
 "storm" = "Ventisca";
 "garland" = "Guirnalda";
 "garland.blinks" = "Parpadeo";
+"snowmen" = "Muñecos de nieve";
+"snowmen.hint" = "⌥ + puntero por la nieve hace una bola";
+"garland.style" = "Estilo de guirnalda";
+"garland.style.bulbs" = "Bombillas de colores";
+"garland.style.fairy" = "Luces cálidas";
+"garland.style.stars" = "Estrellas";
+"flakes.style" = "Copos";
+"flakes.style.soft" = "Suaves";
+"flakes.style.crystals" = "Cristales";
+"flakes.style.big" = "Copos grandes";
 "icicles" = "Carámbanos";
 "newyear.sign" = "¡Feliz Año Nuevo!";
 "settings" = "Ajustes";

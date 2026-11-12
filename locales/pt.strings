@@ -13,6 +13,16 @@
 "storm" = "Nevasca";
 "garland" = "Guirlanda";
 "garland.blinks" = "Piscar";
+"snowmen" = "Bonecos de neve";
+"snowmen.hint" = "⌥ + cursor na neve faz uma bola";
+"garland.style" = "Estilo da guirlanda";
+"garland.style.bulbs" = "Lâmpadas coloridas";
+"garland.style.fairy" = "Luzes quentes";
+"garland.style.stars" = "Estrelas";
+"flakes.style" = "Flocos";
+"flakes.style.soft" = "Suaves";
+"flakes.style.crystals" = "Cristais";
+"flakes.style.big" = "Flocos grandes";
 "icicles" = "Pingentes de gelo";
 "newyear.sign" = "Feliz Ano Novo!";
 "settings" = "Ajustes";

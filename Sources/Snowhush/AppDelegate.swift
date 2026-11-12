@@ -30,6 +30,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
     private var garlandItem: NSMenuItem!
     private var garlandBlinksItem: NSMenuItem!
     private var iciclesItem: NSMenuItem!
+    private var snowmenItem: NSMenuItem!
+    private var garlandStyleItems: [NSMenuItem] = []
+    private var flakeStyleItems: [NSMenuItem] = []
     private var mixedItem: NSMenuItem!
     private var modeItems: [(item: NSMenuItem, mode: Mode)] = []
     private var maxPerformanceItem: NSMenuItem!
@@ -108,6 +111,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
                 snow.garland = Preferences.garland
                 snow.garlandBlinks = Preferences.garlandBlinks
                 snow.icicles = Preferences.icicles
+                snow.snowmen = Preferences.snowmen
+                snow.garlandStyle = Preferences.garlandStyle
+                snow.flakeStyle = Preferences.flakeStyle
                 snow.modes = Preferences.modes
                 snow.maxFrameRate = Preferences.maxPerformance
                 snow.activityChanged = { [weak self] in self?.updateActivity() }
@@ -208,10 +214,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         garlandItem = toggle(tr("garland"), #selector(toggleGarland), to: newYear)
         garlandBlinksItem = toggle(tr("garland.blinks"), #selector(toggleGarlandBlinks), to: newYear)
         iciclesItem = toggle(tr("icicles"), #selector(toggleIcicles), to: newYear)
+        snowmenItem = toggle(tr("snowmen"), #selector(toggleSnowmen), to: newYear)
         newYear.addItem(.separator())
         stormItem = toggle(tr("storm"), #selector(toggleStorm), to: newYear)
+        newYear.addItem(.separator())
+        let garlandStyles = NSMenu()
+        garlandStyleItems = ["garland.style.bulbs", "garland.style.fairy", "garland.style.stars"].enumerated().map { k, key in
+            let item = add(tr(key), #selector(chooseGarlandStyle), to: garlandStyles)
+            item.tag = k
+            return item
+        }
+        newYear.addItem(withTitle: tr("garland.style"), action: nil, keyEquivalent: "").submenu = garlandStyles
+        let flakeStyles = NSMenu()
+        flakeStyleItems = ["flakes.style.soft", "flakes.style.crystals", "flakes.style.big"].enumerated().map { k, key in
+            let item = add(tr(key), #selector(chooseFlakeStyle), to: flakeStyles)
+            item.tag = k
+            return item
+        }
+        newYear.addItem(withTitle: tr("flakes.style"), action: nil, keyEquivalent: "").submenu = flakeStyles
+        newYear.addItem(.separator())
+        let hint = newYear.addItem(withTitle: tr("snowmen.hint"), action: nil, keyEquivalent: "")
+        hint.isEnabled = false
         // Several are wanted at once, so the menu stays open between them.
-        for item in [newYearItem, garlandItem, garlandBlinksItem, iciclesItem, stormItem] { (item?.view as? MenuToggle)?.staysOpen = { true } }
+        for item in [newYearItem, garlandItem, garlandBlinksItem, iciclesItem, snowmenItem, stormItem] { (item?.view as? MenuToggle)?.staysOpen = { true } }
         menu.addItem(withTitle: tr("newyear"), action: nil, keyEquivalent: "").submenu = newYear
         clearItem = add(tr("clear.snow"), #selector(clearSnow), to: menu)
         menu.addItem(.separator())
@@ -291,6 +316,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
         garlandBlinksItem.state = Preferences.garlandBlinks ? .on : .off
         garlandBlinksItem.isEnabled = Preferences.garland
         iciclesItem.state = Preferences.icicles ? .on : .off
+        snowmenItem.state = Preferences.snowmen ? .on : .off
+        for item in garlandStyleItems { item.state = item.tag == Preferences.garlandStyle ? .on : .off }
+        for item in flakeStyleItems { item.state = item.tag == Preferences.flakeStyle ? .on : .off }
         maxPerformanceItem.state = Preferences.maxPerformance ? .on : .off
         behindWindowsItem.state = behindWindows ? .on : .off
         fullScreenItem.state = Preferences.showOverFullScreen ? .on : .off
@@ -430,6 +458,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, SPUSta
     @objc private func toggleIcicles() {
         Preferences.icicles.toggle()
         for snow in screens { snow.icicles = Preferences.icicles }
+    }
+
+    @objc private func toggleSnowmen() {
+        Preferences.snowmen.toggle()
+        for snow in screens { snow.snowmen = Preferences.snowmen }
+    }
+
+    @objc private func chooseGarlandStyle(_ sender: NSMenuItem) {
+        Preferences.garlandStyle = sender.tag
+        for snow in screens { snow.garlandStyle = Preferences.garlandStyle }
+        for item in garlandStyleItems { item.state = item.tag == sender.tag ? .on : .off }
+    }
+
+    @objc private func chooseFlakeStyle(_ sender: NSMenuItem) {
+        Preferences.flakeStyle = sender.tag
+        for snow in screens { snow.flakeStyle = Preferences.flakeStyle }
+        for item in flakeStyleItems { item.state = item.tag == sender.tag ? .on : .off }
     }
 
     @objc private func toggleHalloween() {

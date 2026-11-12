@@ -106,6 +106,22 @@ final class ScreenSnow {
         get { simulation.icicles }
         set { simulation.icicles = newValue }
     }
+    var snowmen: Bool {
+        get { simulation.snowmen }
+        set { simulation.snowmen = newValue }
+    }
+    var garlandStyle: Int {
+        get { simulation.garlandStyle }
+        set { simulation.garlandStyle = newValue }
+    }
+    var flakeStyle: Int {
+        get { simulation.flakeStyle }
+        set { simulation.flakeStyle = newValue }
+    }
+    /// Picks up and lets go of the snowballs while the pointer is over one.
+    private var mouseMonitor: Any?
+    /// The app in front before a snowball was picked up: it is put back in front once it is let go of.
+    private var frontApp: NSRunningApplication?
     var modes: [Mode] {
         get { simulation.modes }
         set { simulation.modes = newValue }
@@ -149,7 +165,9 @@ final class ScreenSnow {
             // Notification Center is in front of the snow then, which the pointer over it can't reach.
             if window.notificationLevel != nil && tracker.notificationCoversPointer { return SIMD2(-10_000, -10_000) }
             let mouse = NSEvent.mouseLocation
-            return SIMD2(Float(mouse.x - window.frame.minX), Float(mouse.y - window.frame.minY))
+            let point = SIMD2(Float(mouse.x - window.frame.minX), Float(mouse.y - window.frame.minY))
+            tendMouse(at: point)
+            return point
         }
         renderer.windowSurfaces = { [unowned self] now in
             // Behind the windows the snow still settles on them: what lies on a window's top edge is above it, in
@@ -444,12 +462,44 @@ final class ScreenSnow {
     }
 
     func close() {
+        if let mouseMonitor { NSEvent.removeMonitor(mouseMonitor) }
+        mouseMonitor = nil
         lookout?.invalidate()
         active = false
         view.isPaused = true
         view.delegate = nil
         window.orderOut(nil)
         dock.close()
+    }
+
+    /// Over a snowball the overlay takes the mouse, so it can be picked up; anywhere else clicks go through it.
+    private func tendMouse(at point: SIMD2<Float>) {
+        simulation.rollKey = NSEvent.modifierFlags.contains(.option)
+        if simulation.carriesLumps && NSEvent.pressedMouseButtons & 1 == 0 { letGo() }
+        let wanted = simulation.snowmen && (simulation.carriesLumps || simulation.lumpHit(point))
+        guard window.ignoresMouseEvents == wanted else { return }
+        if wanted {
+            let front = NSWorkspace.shared.frontmostApplication
+            if front?.processIdentifier != ProcessInfo.processInfo.processIdentifier { frontApp = front }
+            if mouseMonitor == nil {
+                mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { [weak self] event in
+                    guard let self, event.window === self.window else { return event }
+                    if event.type == .leftMouseDown {
+                        let mouse = NSEvent.mouseLocation
+                        self.simulation.grabLump(at: SIMD2(Float(mouse.x - self.window.frame.minX), Float(mouse.y - self.window.frame.minY)))
+                    } else {
+                        self.letGo()
+                    }
+                    return nil
+                }
+            }
+        }
+        window.ignoresMouseEvents = !wanted
+    }
+
+    private func letGo() {
+        simulation.dropLumps(throwing: true)
+        if NSApp.isActive, let frontApp, !frontApp.isTerminated { frontApp.activate() }
     }
 
     /// Window bounds come in global coordinates with the origin at the top left of the primary display.

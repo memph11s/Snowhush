@@ -13,6 +13,16 @@
 "storm" = "暴风雪";
 "garland" = "彩灯";
 "garland.blinks" = "闪烁";
+"snowmen" = "雪人";
+"snowmen.hint" = "⌥ + 指针在雪中滚雪球";
+"garland.style" = "彩灯样式";
+"garland.style.bulbs" = "彩色灯泡";
+"garland.style.fairy" = "暖光小灯";
+"garland.style.stars" = "星星";
+"flakes.style" = "雪花";
+"flakes.style.soft" = "柔和";
+"flakes.style.crystals" = "晶体";
+"flakes.style.big" = "大雪片";
 "icicles" = "冰柱";
 "newyear.sign" = "新年快乐！";
 "settings" = "设置";

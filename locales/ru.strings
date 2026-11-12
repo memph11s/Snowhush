@@ -13,6 +13,16 @@
 "storm" = "Буря";
 "garland" = "Гирлянда";
 "garland.blinks" = "Мигание";
+"snowmen" = "Снеговики";
+"snowmen.hint" = "⌥ + курсор по снегу — лепить ком";
+"garland.style" = "Вид гирлянды";
+"garland.style.bulbs" = "Цветные лампочки";
+"garland.style.fairy" = "Тёплые огоньки";
+"garland.style.stars" = "Звёзды";
+"flakes.style" = "Снежинки";
+"flakes.style.soft" = "Мягкие";
+"flakes.style.crystals" = "Кристаллы";
+"flakes.style.big" = "Хлопья";
 "icicles" = "Сосульки";
 "newyear.sign" = "С Новым годом!";
 "settings" = "Настройки";

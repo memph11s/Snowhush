@@ -44,6 +44,9 @@ enum Preferences {
     private static let garlandKey = "garland"
     private static let garlandBlinksKey = "garlandBlinks"
     private static let iciclesKey = "icicles"
+    private static let snowmenKey = "snowmen"
+    private static let garlandStyleKey = "garlandStyle"
+    private static let flakeStyleKey = "flakeStyle"
 
     static func registerDefaults() {
         let calm = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -68,6 +71,9 @@ enum Preferences {
             garlandKey: false,
             garlandBlinksKey: true,
             iciclesKey: false,
+            snowmenKey: true,
+            garlandStyleKey: 0,
+            flakeStyleKey: 0,
         ])
         if defaults.object(forKey: intensityKey) == nil, let stop = defaults.object(forKey: snowfallKey) as? Int {
             defaults.set([0, 0.25, 0.5, 0.75, 0.5][min(max(stop, 0), 4)], forKey: intensityKey)
@@ -171,6 +177,24 @@ enum Preferences {
     static var icicles: Bool {
         get { defaults.bool(forKey: iciclesKey) }
         set { defaults.set(newValue, forKey: iciclesKey) }
+    }
+
+    /// Snowballs rolled with Option held and stacked into snowmen.
+    static var snowmen: Bool {
+        get { defaults.bool(forKey: snowmenKey) }
+        set { defaults.set(newValue, forKey: snowmenKey) }
+    }
+
+    /// What the garland is strung with: 0 coloured bulbs, 1 warm fairy lights, 2 stars.
+    static var garlandStyle: Int {
+        get { min(max(defaults.integer(forKey: garlandStyleKey), 0), 2) }
+        set { defaults.set(newValue, forKey: garlandStyleKey) }
+    }
+
+    /// How the flakes look: 0 soft round, 1 crystals, 2 big flakes.
+    static var flakeStyle: Int {
+        get { min(max(defaults.integer(forKey: flakeStyleKey), 0), 2) }
+        set { defaults.set(newValue, forKey: flakeStyleKey) }
     }
 
     /// Halloween turned on from the menu, for every day.

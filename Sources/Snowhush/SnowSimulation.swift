@@ -726,6 +726,40 @@ final class SnowSimulation {
     private var drips: [(position: SIMD2<Float>, speed: Float)] = []
     private var nextDrip: Double = 0
 
+    /// Snowballs rolled out of the drifts with Option held, carried with the mouse and stacked into snowmen.
+    var snowmen = false {
+        didSet {
+            guard snowmen != oldValue else { return }
+            if !snowmen { dropLumps() }
+            decorChanged = true
+            stirred()
+        }
+    }
+    /// Option is held: the pointer rolls a snowball along the snow instead of pushing it aside.
+    var rollKey = false
+    /// What the garland is strung with: 0 coloured bulbs, 1 warm fairy lights, 2 stars.
+    var garlandStyle = 0 {
+        didSet {
+            guard garlandStyle != oldValue else { return }
+            garlandCache = nil
+            decorChanged = true
+            stirred()
+        }
+    }
+    /// How the falling flakes look: 0 soft round, 1 six-armed crystals, 2 big ragged flakes.
+    var flakeStyle = 0 {
+        didSet { if flakeStyle != oldValue { restyled = true; stirred() } }
+    }
+    var lumps: [SnowLump] = []
+    var pointer = SIMD2<Float>(-10_000, -10_000)
+    var rolling: Int?
+    /// Let go of a roll by stacking: no new ball starts until Option is let go of.
+    var rollLatched = false
+    var dragging: (ids: [Int], offsets: [SIMD2<Float>])?
+    var nextLumpID = 0
+    var lumpsChanged = false
+    var lumpsMoving = false
+
     init(width: Float, height: Float, intensity: Float) {
         self.width = width
         self.height = height
@@ -772,6 +806,7 @@ final class SnowSimulation {
     /// Returns whether anything visible changed.
     func step(dt: Float, cursor point: SIMD2<Float>) -> Bool {
         clock += Double(dt)
+        pointer = point
         let wasMoving = !flakes.isEmpty || !grains.isEmpty || !motes.isEmpty || !ghosts.isEmpty || !fallingSigns.isEmpty || !snowballs.isEmpty
             || !splashes.isEmpty || !glassDrops.isEmpty || wet
         heightsChanged = false
@@ -803,6 +838,7 @@ final class SnowSimulation {
         if halloween { settlePumpkins(dt: dt) }
         tendStorm(dt: dt)
         tendDecor(dt: dt)
+        tendLumps(dt: dt)
 
         for layer in layers {
             layer.refreshTop()
@@ -810,6 +846,7 @@ final class SnowSimulation {
         }
         // Only a cursor that actually displaces snow needs the full rate; one passing near it or resting in it changes nothing.
         let pushed = clock - lastWindowMotion < 0.6 || clock - lastCursorPush < 0.3 || gust != nil || !snowballs.isEmpty || clock - hitAt < 0.6
+            || sculpting || lumpsMoving
         // A storm's flakes read fine at the calm rate too; only its strongest gusts need more.
         // The steady trickle off window corners is a few tiny grains at a time; they read fine at the calm rate.
         let flying = grains.count > 24 || clock < scatteredUntil || abs(slideWind) > 20 || abs(stormWind) > 110 && !flakes.isEmpty
@@ -822,7 +859,8 @@ final class SnowSimulation {
         }
         let changed = wasMoving || !flakes.isEmpty || !grains.isEmpty || !motes.isEmpty || !ghosts.isEmpty || !fallingSigns.isEmpty || !snowballs.isEmpty
             || !splashes.isEmpty || !glassDrops.isEmpty || wet || heightsChanged || windowsChanged || pumpkinsMoved || restyled || borrowedChanged
-            || decorChanged
+            || decorChanged || lumpsChanged
+        lumpsChanged = false
         restyled = false
         decorChanged = false
         windowsChanged = false
@@ -1230,7 +1268,7 @@ final class SnowSimulation {
         // Three ways of blinking in turn: every other bulb, a running light and a twinkle.
         let tick = max(blinkTick, 0)
         let pattern = (tick / 16) % 3
-        let spacing: Float = 26
+        let spacing: Float = garlandStyle == 1 ? 13 : garlandStyle == 2 ? 34 : 26
         var k = 0
         var bulbX = spacing / 2
         while bulbX < width {
@@ -1245,16 +1283,39 @@ final class SnowSimulation {
             default: lit = NewYear.noise(UInt32(k), UInt32(tick)) > 0.3
             }
             }
-            let color = NewYear.bulbColors[k % NewYear.bulbColors.count]
-            let anchor = SIMD2(bulbX, curve.y + 1)
             let angle = atan(curve.slope) * 0.6 + (NewYear.noise(UInt32(k), 7) - 0.5) * 0.3
             let brightness: Float = lit ? 1 : 0.32
-            bulbs.append(DecorSprite(picture: .bulb, anchor: anchor, size: SIMD2(7, 11.2), pivot: SIMD2(0.5, 1), angle: angle,
-                                     tint: SIMD4(color * brightness + (lit ? SIMD3(repeating: 0.12) : .zero), 1), glow: lit ? 1 : 0))
-            if lit {
-                // Added light: much colour, little cover.
-                halos.append(DecorSprite(picture: .halo, anchor: anchor - SIMD2(0, 6.5), size: SIMD2(30, 30), pivot: SIMD2(0.5, 0.5),
-                                         tint: SIMD4(color * 0.5, 0.06), glow: 1))
+            switch garlandStyle {
+            case 1:
+                // Warm white fairy lights, small and close together.
+                let color = SIMD3<Float>(1, 0.8, 0.48)
+                let anchor = SIMD2(bulbX, curve.y - 1.5)
+                bulbs.append(DecorSprite(picture: .fairy, anchor: anchor, size: SIMD2(4.2, 4.2), pivot: SIMD2(0.5, 0.5),
+                                         tint: SIMD4(color * (lit ? 1 : 0.45) + (lit ? SIMD3(repeating: 0.1) : .zero), 1), glow: lit ? 1 : 0))
+                if lit {
+                    halos.append(DecorSprite(picture: .halo, anchor: anchor, size: SIMD2(18, 18), pivot: SIMD2(0.5, 0.5),
+                                             tint: SIMD4(color * 0.55, 0.05), glow: 1))
+                }
+            case 2:
+                // Stars, gold in turn with the colours.
+                let color = k % 2 == 0 ? SIMD3<Float>(1, 0.78, 0.25) : NewYear.bulbColors[(k / 2) % NewYear.bulbColors.count]
+                let anchor = SIMD2(bulbX, curve.y + 1)
+                bulbs.append(DecorSprite(picture: .star, anchor: anchor, size: SIMD2(14, 14), pivot: SIMD2(0.5, 0.97), angle: angle * 0.6,
+                                         tint: SIMD4(color * brightness + (lit ? SIMD3(repeating: 0.12) : .zero), 1), glow: lit ? 1 : 0))
+                if lit {
+                    halos.append(DecorSprite(picture: .halo, anchor: anchor - SIMD2(0, 7), size: SIMD2(34, 34), pivot: SIMD2(0.5, 0.5),
+                                             tint: SIMD4(color * 0.5, 0.06), glow: 1))
+                }
+            default:
+                let color = NewYear.bulbColors[k % NewYear.bulbColors.count]
+                let anchor = SIMD2(bulbX, curve.y + 1)
+                bulbs.append(DecorSprite(picture: .bulb, anchor: anchor, size: SIMD2(7, 11.2), pivot: SIMD2(0.5, 1), angle: angle,
+                                         tint: SIMD4(color * brightness + (lit ? SIMD3(repeating: 0.12) : .zero), 1), glow: lit ? 1 : 0))
+                if lit {
+                    // Added light: much colour, little cover.
+                    halos.append(DecorSprite(picture: .halo, anchor: anchor - SIMD2(0, 6.5), size: SIMD2(30, 30), pivot: SIMD2(0.5, 0.5),
+                                             tint: SIMD4(color * 0.5, 0.06), glow: 1))
+                }
             }
             k += 1
             bulbX += spacing
@@ -1992,6 +2053,8 @@ final class SnowSimulation {
         let speed = simd_length(velocity)
         if speed > 3000 { velocity *= 3000 / speed }
         cursorVelocity += (velocity - cursorVelocity) * 0.5
+        // Rolling or carrying a snowball, the pointer leaves the rest of the snow be.
+        if sculpting { return }
 
         let low = min(center.y, previous.y) - cursorRadius
         let high = max(center.y, previous.y) + cursorRadius
@@ -3468,6 +3531,7 @@ final class SnowSimulation {
     /// Clears all the snow: a gust in `direction` lifts it off the ground and the windows and blows it off the screen,
     /// or, `calm`, it melts away where it lies.
     func blowAway(direction: Float, calm: Bool) {
+        dropLumps()
         gust = (clock, direction < 0 ? -1 : 1, calm)
         // Snow kept for windows on other Spaces goes too, out of sight.
         dormant.removeAll()
@@ -4186,4 +4250,367 @@ private func smoothDamp(_ current: inout SIMD2<Float>, _ velocity: inout SIMD2<F
 private func smoothstep(_ edge0: Float, _ edge1: Float, _ x: Float) -> Float {
     let t = min(max((x - edge0) / (edge1 - edge0), 0), 1)
     return t * t * (3 - 2 * t)
+}
+
+/// A snowball rolled out of the snow: where its middle is, how big it is and what it rests on.
+struct SnowLump {
+    enum Support {
+        case air
+        /// Lying in a drift, `dx` from the start of its layer, riding along as its window moves.
+        case layer(SnowLayer, dx: Float)
+        /// Stacked on another ball, `dx` off its middle.
+        case lump(Int, dx: Float)
+    }
+
+    let id: Int
+    var center: SIMD2<Float>
+    var radius: Float
+    var velocity = SIMD2<Float>(repeating: 0)
+    /// How far it has turned as it rolled, counter-clockwise.
+    var spin: Float = 0
+    var support: Support = .air
+    var hidden = false
+    let seed: Float
+}
+
+extension SnowSimulation {
+    private static let lumpGravity: Float = 1500
+    private static let smallestLump: Float = 5
+    private static let largestLump: Float = 46
+    private static let mostLumps = 12
+    /// How deep a ball sits in what it rests on, as a share of its radius.
+    private static let lumpSink: Float = 0.12
+
+    /// Rolling one along or carrying some: the pointer moves them and nothing else.
+    var sculpting: Bool { snowmen && (rollKey && !rollLatched || dragging != nil) }
+
+    /// Whether the pointer is over a ball it could pick up.
+    func lumpHit(_ point: SIMD2<Float>) -> Bool {
+        snowmen && lumps.contains { !$0.hidden && simd_distance($0.center, point) < $0.radius + 3 }
+    }
+
+    var carriesLumps: Bool { dragging != nil }
+
+    /// Picks up the ball under the pointer and everything stacked on it.
+    @discardableResult
+    func grabLump(at point: SIMD2<Float>) -> Bool {
+        guard snowmen,
+              let hit = lumps.filter({ !$0.hidden && simd_distance($0.center, point) < $0.radius + 3 }).max(by: { $0.center.y < $1.center.y })
+        else { return false }
+        if rolling == hit.id { rolling = nil }
+        var ids = [hit.id]
+        var k = 0
+        while k < ids.count {
+            let below = ids[k]
+            for lump in lumps {
+                if case .lump(let base, _) = lump.support, base == below, !ids.contains(lump.id) { ids.append(lump.id) }
+            }
+            k += 1
+        }
+        let offsets = ids.map { id in (lumps.first { $0.id == id }?.center ?? point) - point }
+        for (i, lump) in lumps.enumerated() where lump.id == hit.id { lumps[i].support = .air }
+        dragging = (ids, offsets)
+        lumpsChanged = true
+        stirred()
+        return true
+    }
+
+    /// Lets go of what is carried: it flies on as it was moving and falls.
+    func dropLumps(throwing: Bool) {
+        guard let held = dragging else { return }
+        dragging = nil
+        var fling = cursorVelocity
+        let speed = simd_length(fling)
+        if speed > 1400 { fling *= 1400 / speed }
+        for (i, lump) in lumps.enumerated() where lump.id == held.ids.first {
+            lumps[i].velocity = throwing ? fling : .zero
+            lumps[i].support = .air
+        }
+        lumpsChanged = true
+    }
+
+    func dropLumps() {
+        guard !lumps.isEmpty || dragging != nil else { return }
+        lumps.removeAll()
+        rolling = nil
+        dragging = nil
+        lumpsChanged = true
+    }
+
+    private func lump(_ id: Int) -> Int? { lumps.firstIndex { $0.id == id } }
+
+    private func hasLayer(_ layer: SnowLayer) -> Bool { layers.contains { $0 === layer } }
+
+    /// Whether anything is stacked on the ball.
+    private func carries(_ id: Int) -> Bool {
+        lumps.contains { if case .lump(let base, _) = $0.support { return base == id } else { return false } }
+    }
+
+    /// The highest snow surface under `x` at or below `y`: the drift on a window or the Dock, or the ground's.
+    private func surface(under x: Float, below y: Float) -> (y: Float, layer: SnowLayer)? {
+        var best: (y: Float, layer: SnowLayer)?
+        for layer in layers {
+            guard let i = layer.index(at: x) else { continue }
+            let top = layer.surface(i)
+            guard top <= y || layer === ground, top > best?.y ?? -.infinity else { continue }
+            if layer !== ground && !layer.visible[i] { continue }
+            best = (top, layer)
+        }
+        if best == nil, x >= 0, x <= width { best = (ground.surface(ground.clampedIndex(at: x)), ground) }
+        return best
+    }
+
+    /// The snow on `layer` a ball of `radius` at `x` rests on: the mean of the columns under its middle.
+    private func rest(on layer: SnowLayer, at x: Float, radius: Float) -> Float? {
+        guard layer.index(at: x) != nil else { return nil }
+        let from = layer.clampedIndex(at: x - radius * 0.35), to = layer.clampedIndex(at: x + radius * 0.35)
+        var sum: Float = 0
+        for i in from...to { sum += layer.surface(i) }
+        return sum / Float(to - from + 1)
+    }
+
+    /// Takes the snow off the columns under a ball rolled `distance` along `layer`; returns the area it took.
+    private func scoop(_ layer: SnowLayer, at x: Float, radius: Float, distance: Float) -> Float {
+        let from = layer.clampedIndex(at: x - radius * 0.6), to = layer.clampedIndex(at: x + radius * 0.6)
+        let depth = min(distance * 0.2, 4)
+        var taken: Float = 0
+        for i in from...to where layer === ground || layer.visible[i] {
+            let old = layer.heights[i]
+            guard old > 0.2 else { continue }
+            layer.remove(snow: min(depth, old * 0.5), from: i)
+            taken += (old - layer.heights[i]) * columnWidth
+        }
+        if taken > 0 { heightsChanged = true }
+        return taken
+    }
+
+    func tendLumps(dt: Float) {
+        lumpsMoving = false
+        guard snowmen else { return }
+        if !rollKey { rollLatched = false }
+        roll(dt: dt)
+        carry()
+        settleLumps(dt: dt)
+    }
+
+    /// Option held over the snow starts a ball, or picks up one already lying there; moving the pointer then rolls it
+    /// along, growing as it gathers the snow, until it is let go of or stacked on another.
+    private func roll(dt: Float) {
+        guard rollKey, !rollLatched, dragging == nil else {
+            rolling = nil
+            return
+        }
+        if rolling.flatMap(lump) == nil {
+            rolling = nil
+            if let hit = lumps.filter({ !$0.hidden && !carries($0.id) && simd_distance($0.center, pointer) < $0.radius + 6 })
+                .max(by: { $0.center.y < $1.center.y }) {
+                rolling = hit.id
+            } else if let found = surface(under: pointer.x, below: pointer.y + 14), pointer.y > found.y - 30,
+                      let i = found.layer.index(at: pointer.x), found.layer.heights[i] > 2 {
+                if lumps.count >= Self.mostLumps, let oldest = lumps.firstIndex(where: { !carries($0.id) }) {
+                    lumps.remove(at: oldest)
+                }
+                let radius = Self.smallestLump
+                lumps.append(SnowLump(id: nextLumpID, center: SIMD2(pointer.x, found.y + radius * (1 - Self.lumpSink)), radius: radius,
+                                      support: .layer(found.layer, dx: pointer.x - found.layer.base.x), seed: random.next()))
+                _ = scoop(found.layer, at: pointer.x, radius: radius, distance: 20)
+                rolling = nextLumpID
+                nextLumpID += 1
+            }
+        }
+        guard let id = rolling, let k = lump(id) else { return }
+        lumpsMoving = true
+        lumpsChanged = true
+        var ball = lumps[k]
+        // Too far from the ball, the pointer lets go of it.
+        if simd_distance(pointer, ball.center) > ball.radius + 140 {
+            rolling = nil
+            return
+        }
+        let target = min(max(pointer.x, ball.radius), width - ball.radius)
+        var dx = target - ball.center.x
+        let most = 900 * dt
+        dx = min(max(dx, -most), most)
+        var x = ball.center.x + dx
+        // A bigger ball stands in the way; one no bigger than it lies on it then.
+        for other in lumps where other.id != id && !other.hidden {
+            if case .air = other.support { continue }
+            let gap = abs(other.center.x - x), reach = other.radius + ball.radius
+            guard gap < reach, abs(other.center.y - ball.center.y) < reach else { continue }
+            if !carries(other.id) && ball.radius <= other.radius * 1.15 && gap < other.radius * 0.9 {
+                ball.center = SIMD2(other.center.x, other.center.y + (other.radius + ball.radius) * (1 - Self.lumpSink))
+                ball.support = .lump(other.id, dx: 0)
+                ball.velocity = .zero
+                lumps[k] = ball
+                rolling = nil
+                rollLatched = true
+                return
+            }
+            if gap < reach * 0.98 && carries(other.id) || ball.radius > other.radius * 1.15 {
+                x = other.center.x + (x < other.center.x ? -1 : 1) * reach * 0.98
+            }
+        }
+        x = min(max(x, ball.radius), width - ball.radius)
+        dx = x - ball.center.x
+        let found: (y: Float, layer: SnowLayer)?
+        if case .layer(let layer, _) = ball.support, hasLayer(layer), layer.index(at: x) != nil {
+            found = rest(on: layer, at: x, radius: ball.radius).map { ($0, layer) }
+        } else {
+            found = surface(under: x, below: ball.center.y)
+        }
+        guard let found else { return }
+        if abs(dx) > 0.01 {
+            let gained = scoop(found.layer, at: x, radius: ball.radius, distance: abs(dx)) * 1.6
+            let area = Float.pi * ball.radius * ball.radius + gained
+            ball.radius = min((area / .pi).squareRoot(), Self.largestLump)
+            ball.spin -= dx / ball.radius
+        }
+        let resting = rest(on: found.layer, at: x, radius: ball.radius) ?? found.y
+        ball.center = SIMD2(x, resting + ball.radius * (1 - Self.lumpSink))
+        ball.support = .layer(found.layer, dx: x - found.layer.base.x)
+        ball.velocity = .zero
+        lumps[k] = ball
+    }
+
+    /// Carried balls follow the pointer, the stack on them too.
+    private func carry() {
+        guard let held = dragging else { return }
+        lumpsMoving = true
+        lumpsChanged = true
+        for (id, offset) in zip(held.ids, held.offsets) {
+            guard let k = lump(id) else { continue }
+            var center = pointer + offset
+            center.x = min(max(center.x, lumps[k].radius), width - lumps[k].radius)
+            lumps[k].center = center
+            lumps[k].velocity = .zero
+            lumps[k].hidden = false
+        }
+    }
+
+    /// Lying balls ride on their window or the ball under them; the others fall until they land on snow, a window or
+    /// another ball.
+    private func settleLumps(dt: Float) {
+        guard !lumps.isEmpty else { return }
+        let held = Set(dragging?.ids ?? []).union(rolling.map { [$0] } ?? [])
+        // Lower ones first, so those stacked on them follow where they went this step.
+        let order = lumps.indices.sorted { lumps[$0].center.y < lumps[$1].center.y }
+        for k in order where !held.contains(lumps[k].id) {
+            var ball = lumps[k]
+            let before = ball.center
+            switch ball.support {
+            case .layer(let layer, let dx):
+                let x = layer.base.x + dx
+                if hasLayer(layer), x >= ball.radius * 0.2, x <= width, let resting = rest(on: layer, at: x, radius: ball.radius) {
+                    let y = resting + ball.radius * (1 - Self.lumpSink)
+                    // A window pulled down fast from under it leaves it in the air.
+                    if ball.center.y - y > ball.radius * 0.6 {
+                        ball.support = .air
+                    } else {
+                        ball.center = SIMD2(x, ball.center.y + (y - ball.center.y) * min(1, dt * 12))
+                        let i = layer.clampedIndex(at: x)
+                        ball.hidden = layer.occluders.contains {
+                            $0.x < ball.center.x && $0.z > ball.center.x && $0.y < ball.center.y && $0.w > ball.center.y
+                        } || layer !== ground && !layer.visible[i]
+                    }
+                } else {
+                    ball.support = .air
+                }
+            case .lump(let base, let dx):
+                if let b = lump(base) {
+                    let under = lumps[b]
+                    ball.center = SIMD2(under.center.x + dx, under.center.y + (under.radius + ball.radius) * (1 - Self.lumpSink))
+                    ball.hidden = under.hidden
+                    ball.velocity = under.velocity
+                } else {
+                    ball.support = .air
+                }
+            case .air:
+                break
+            }
+            if case .air = ball.support {
+                lumpsMoving = true
+                ball.hidden = false
+                ball.velocity.y -= Self.lumpGravity * dt
+                ball.velocity.x *= exp(-dt * 0.6)
+                var next = ball.center + ball.velocity * dt
+                if next.x < ball.radius || next.x > width - ball.radius {
+                    next.x = min(max(next.x, ball.radius), width - ball.radius)
+                    ball.velocity.x *= -0.4
+                }
+                // Where it lands: the highest rest between where it was and where it is going.
+                var landing: (y: Float, support: SnowLump.Support)?
+                for layer in layers {
+                    guard let resting = rest(on: layer, at: next.x, radius: ball.radius) else { continue }
+                    if let i = layer.index(at: next.x), layer !== ground, !layer.visible[i] { continue }
+                    let y = resting + ball.radius * (1 - Self.lumpSink)
+                    if y <= ball.center.y + 1 && y >= next.y && y > landing?.y ?? -.infinity {
+                        landing = (y, .layer(layer, dx: next.x - layer.base.x))
+                    }
+                }
+                for other in lumps where other.id != ball.id && !held.contains(other.id) && !carries(other.id) {
+                    if case .air = other.support { continue }
+                    if case .lump(let base, _) = other.support, base == ball.id { continue }
+                    let dx = next.x - other.center.x
+                    guard abs(dx) < other.radius * 0.75 else { continue }
+                    let y = other.center.y + (other.radius + ball.radius) * (1 - Self.lumpSink)
+                    if y <= ball.center.y + 1 && y >= next.y && y > landing?.y ?? -.infinity {
+                        landing = (y, .lump(other.id, dx: dx * 0.3))
+                    }
+                }
+                if landing == nil && next.y < ball.radius * (1 - Self.lumpSink) {
+                    let y = ground.surface(ground.clampedIndex(at: next.x)) + ball.radius * (1 - Self.lumpSink)
+                    landing = (max(y, ball.radius * 0.5), .layer(ground, dx: next.x - ground.base.x))
+                }
+                if let landing {
+                    next.y = landing.y
+                    ball.support = landing.support
+                    ball.velocity = .zero
+                }
+                ball.spin -= (next.x - ball.center.x) / ball.radius
+                ball.center = next
+            }
+            if simd_distance(before, ball.center) > 0.01 { lumpsChanged = true }
+            lumps[k] = ball
+        }
+    }
+
+    /// The balls and the snowmen stacked from them, drawn in front of the drifts they lie in.
+    var lumpDecor: [DecorSprite] {
+        guard snowmen, !lumps.isEmpty else { return [] }
+        var above: [Int: Int] = [:]
+        for lump in lumps { if case .lump(let base, _) = lump.support { above[base] = lump.id } }
+        var byID: [Int: SnowLump] = [:]
+        for lump in lumps { byID[lump.id] = lump }
+        var arms: [DecorSprite] = [], balls: [DecorSprite] = [], dress: [DecorSprite] = []
+        for bottom in lumps {
+            if case .lump = bottom.support { continue }
+            var stack = [bottom]
+            while let next = above[stack.last!.id], let lump = byID[next], stack.count < 12 { stack.append(lump) }
+            for ball in stack where !ball.hidden {
+                let size = SIMD2(repeating: ball.radius * 2 * 1.04)
+                balls.append(DecorSprite(picture: .lump, anchor: ball.center, size: size, pivot: SIMD2(0.5, 0.5)))
+                balls.append(DecorSprite(picture: .lumpTexture(Int(ball.seed * 3)), anchor: ball.center, size: size, pivot: SIMD2(0.5, 0.5),
+                                         angle: ball.spin))
+            }
+            // Three or more on top of each other: the top one is the head, the one under it the body.
+            guard stack.count >= 3 else { continue }
+            let head = stack[stack.count - 1], body = stack[stack.count - 2]
+            guard !head.hidden else { continue }
+            let tilt = atan2(head.center.x - body.center.x, head.center.y - body.center.y) * -0.5
+            let r = body.radius
+            for side: Float in [-1, 1] {
+                arms.append(DecorSprite(picture: .twig, anchor: body.center + SIMD2(side * r * 0.55, r * 0.15),
+                                        size: SIMD2(side * r * 1.25, r * 0.75), pivot: SIMD2(0, 0.2), angle: side * 0.35))
+            }
+            dress.append(DecorSprite(picture: .buttons, anchor: body.center + SIMD2(0, r * 0.05), size: SIMD2(r * 0.28, r * 1.1),
+                                     pivot: SIMD2(0.5, 0.5), angle: tilt))
+            let h = head.radius
+            dress.append(DecorSprite(picture: .scarf, anchor: head.center - SIMD2(0, h * 0.82), size: SIMD2(h * 2, h * 1.2),
+                                     pivot: SIMD2(0.5, 0.75), angle: tilt))
+            dress.append(DecorSprite(picture: .face, anchor: head.center, size: SIMD2(h * 2, h * 2), pivot: SIMD2(0.5, 0.5), angle: tilt))
+            dress.append(DecorSprite(picture: .hat, anchor: head.center + SIMD2(0, h * 0.62), size: SIMD2(h * 1.5, h * 1.2),
+                                     pivot: SIMD2(0.5, 0), angle: tilt - 0.12))
+        }
+        return arms + balls + dress
+    }
 }
