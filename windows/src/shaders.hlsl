@@ -1254,12 +1254,12 @@ float garlandStar(float2 p, float r) {
 }
 
 // Premultiplied colour of the garland at `p`, in points; `light` dims the wire at night, not the lights.
-float4 garlandAt(float2 p, float4 garland, float width, float3 light) {
-    int style = int(garland.x + 0.5);
-    int tick = int(garland.y + 0.5);
-    bool blinks = garland.y >= 0.0;
-    int colour = int(garland.z + 0.5);
-    float top = garland.w;
+float4 garlandAt(float2 p, float4 hung, float width, float3 dim) {
+    int style = int(hung.x + 0.5);
+    int tick = int(hung.y + 0.5);
+    bool blinks = hung.y >= 0.0;
+    int colour = int(hung.z + 0.5);
+    float top = hung.w;
     if (p.y < top - 48.0) return float4(0.0, 0.0, 0.0, 0.0);
     float spacing = style == 1 ? 13.0 : style == 2 ? 34.0 : 26.0;
     float4 color = float4(0.0, 0.0, 0.0, 0.0);
@@ -1280,11 +1280,11 @@ float4 garlandAt(float2 p, float4 garland, float width, float3 light) {
     float2 wire = garlandCurve(p.x, top, width);
     float across = abs(p.y - wire.x) / sqrt(1.0 + wire.y * wire.y);
     float wireCover = 1.0 - smoothstep(0.35, 1.1, across);
-    float3 wireColor = float3(0.07, 0.2, 0.09) * lerp(float3(1.0, 1.0, 1.0), light, 0.6);
+    float3 wireColor = float3(0.07, 0.2, 0.09) * lerp(float3(1.0, 1.0, 1.0), dim, 0.6);
     color = float4(wireColor * wireCover, wireCover) + color * (1.0 - wireCover);
     // The lights on it.
-    for (int j = -1; j <= 1; j++) {
-        int k = nearest + j;
+    for (int m = -1; m <= 1; m++) {
+        int k = nearest + m;
         float x = spacing * 0.5 + float(k) * spacing;
         if (k < 0 || x >= width) continue;
         bool lit = garlandLit(k, tick, blinks);
@@ -1320,7 +1320,7 @@ float4 garlandAt(float2 p, float4 garland, float width, float3 light) {
             float glint = exp(-pow(length(d - float2(-1.1, -4.6)) / 1.0, 2.0)) * (lit ? 0.7 : 0.3);
             body = lerp(body, float3(1.0, 1.0, 1.0), glint);
             cover = max(capCover, glassCover);
-            shade = glassCover >= capCover ? body : float3(0.45, 0.47, 0.5) * lerp(float3(1.0, 1.0, 1.0), light, 0.6);
+            shade = glassCover >= capCover ? body : float3(0.45, 0.47, 0.5) * lerp(float3(1.0, 1.0, 1.0), dim, 0.6);
         }
         color = float4(shade * cover, cover) + color * (1.0 - cover);
     }
