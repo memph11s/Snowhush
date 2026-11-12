@@ -660,6 +660,9 @@ final class SnowSimulation {
     /// The app windows on the screen, left, bottom, right, top: a pumpkin hides from any that covers it.
     var windowFrames: [SIMD4<Float>] = []
 
+    /// The app windows icicles hang under, left, bottom, right, top, and the radius of their corners.
+    var windowEdges: [(frame: SIMD4<Float>, radius: Float)] = []
+
     /// Ornaments, gifts and a snowman with a sign sitting in the drift at the bottom of the screen.
     var newYear = false {
         didSet {
@@ -1238,30 +1241,47 @@ final class SnowSimulation {
     /// The icicles under each window's bottom edge that is in view, and along the menu bar without the garland:
     /// where each hangs from, how wide it is and how long it has grown. Each keeps its place and length on its window.
     private func icicleList() -> [(x: Float, top: Float, width: Float, length: Float)] {
-        var edges: [(left: Float, right: Float, y: Float, seed: UInt32)] = windowFrames.compactMap { frame in
+        var edges: [(left: Float, right: Float, y: Float, radius: Float, seed: UInt32)] = windowEdges.compactMap { edge in
+            let frame = edge.frame
             guard frame.z - frame.x > 80, frame.y > 24, frame.y < height - menuBar - 4 else { return nil }
-            return (max(frame.x, 0), min(frame.z, width), frame.y, UInt32(max(0, frame.z - frame.x).rounded()))
+            return (frame.x, frame.z, frame.y, edge.radius, UInt32(max(0, frame.z - frame.x).rounded()))
         }
-        if !garland && menuBar > 0 { edges.append((0, width, height - menuBar, 1)) }
+        if !garland && menuBar > 0 { edges.append((0, width, height - menuBar, 0, 1)) }
+        // The corners are superellipses, as the windows' are.
+        let exponent: Float = 2.5
         var list: [(x: Float, top: Float, width: Float, length: Float)] = []
         for edge in edges {
             let spacing: Float = 11
             var j: UInt32 = 0
-            var x = edge.left + 7
-            while x < edge.right - 7 {
+            var x = edge.left + 6
+            while x < edge.right - 6 {
                 defer {
                     j += 1
                     x += spacing
                 }
+                guard x >= 0, x <= width else { continue }
                 let n = NewYear.noise(j, edge.seed)
                 guard n > 0.22 else { continue }
+                // Round a corner the edge curves up: an icicle there hangs from the curve, shorter the higher it is, and
+                // none where the curve is steep.
+                let jitter = (NewYear.noise(j &+ 37, edge.seed) - 0.5) * 4
+                let at = x + jitter
+                let inset = min(at - edge.left, edge.right - at)
+                var lift: Float = 0
+                var short: Float = 1
+                if edge.radius > 0 && inset < edge.radius {
+                    let u = (edge.radius - inset) / edge.radius
+                    guard u < 0.7 else { continue }
+                    lift = edge.radius * (1 - pow(1 - pow(u, exponent), 1 / exponent))
+                    short = 1 - u
+                }
+                let top = edge.y + lift
                 // Hidden behind another window, or that one is in front of it: either way it isn't shown.
-                let hidden = windowFrames.contains { $0.x < x && $0.z > x && $0.y < edge.y - 1 && $0.w > edge.y - 1 }
+                let hidden = windowFrames.contains { $0.x < at && $0.z > at && $0.y < edge.y - 1 && $0.w > edge.y - 1 }
                 guard !hidden else { continue }
                 let late = NewYear.noise(j &+ 101, edge.seed)
                 let grown = min(max(icicleGrowth * (0.7 + 0.9 * late) - 0.1 * late, 0), 1)
-                let jitter = (NewYear.noise(j &+ 37, edge.seed) - 0.5) * 4
-                list.append((x + jitter, edge.y, 3 + 4 * n, (5 + 30 * n * n) * grown))
+                list.append((at, top, 3 + 4 * n * short.squareRoot(), (5 + 30 * n * n) * grown * short))
             }
         }
         return list

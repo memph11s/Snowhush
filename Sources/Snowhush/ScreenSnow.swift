@@ -159,6 +159,9 @@ final class ScreenSnow {
             guard tracked else { return nil }
             for (id, display) in update?.handed ?? [:] { displays.hand(id, from: self, to: display) }
             simulation.windowFrames = tracker.covers.map { SIMD4(Float($0.minX), Float($0.minY), Float($0.maxX), Float($0.maxY)) }
+            simulation.windowEdges = tracker.edges.map { edge in
+                (SIMD4(Float(edge.frame.minX), Float(edge.frame.minY), Float(edge.frame.maxX), Float(edge.frame.maxY)), Float(edge.radius))
+            }
             return update
         }
         renderer.borrowedSnow = { [unowned self] in
@@ -229,6 +232,7 @@ final class ScreenSnow {
     func dropWindowSnow() {
         simulation.updateWindows([], interval: 0.1)
         simulation.windowFrames = []
+        simulation.windowEdges = []
         tracker.reset()
     }
 

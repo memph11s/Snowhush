@@ -151,6 +151,9 @@ final class WindowTracker {
     /// Every app window on the screen at the last poll, in overlay coordinates, those filling it or too tall to
     /// carry snow too.
     private(set) var covers: [CGRect] = []
+    /// The app windows' frames in overlay coordinates and how round their corners are: what icicles hang under.
+    /// Stage Manager's thumbnails, widgets and the Dock's windows aren't among them.
+    private(set) var edges: [(frame: CGRect, radius: CGFloat)] = []
     /// Windows carrying snow here at the last poll that have moved on to another display since.
     private var handed: [CGWindowID: CGDirectDisplayID] = [:]
     private var cards: [CGWindowID: (bounds: CGRect, card: Bool)] = [:]
@@ -544,10 +547,12 @@ final class WindowTracker {
         handed = [:]
         fullScreenInView = fullScreenAppHidesDock(in: list)
         fullScreenShare = fullScreenShare(in: list)
+        var edgesFound: [(frame: CGRect, radius: CGFloat)] = []
         defer {
             alphas = fresh
             panelsShownAt = panels
             covers = exposing ? [] : windows
+            edges = exposing ? [] : edgesFound
             windowFrames = frames
             cards = checked
         }
@@ -631,6 +636,10 @@ final class WindowTracker {
             if layer < dockLevel && !fading { windows.append(frame) }
             if layer == 0 && !fading && id != 0 { frames[id] = frame }
             let coverOnly = coverOnlyOwners.contains(owner) && !shelf
+            if layer == 0 && !fading && id != 0 && !coverOnly && owner != "WindowManager" && onScreen && !fills
+                && bounds.width >= 80 && bounds.height >= 40 && !isCard(id, bounds, into: &checked) {
+                edgesFound.append((frame, min(radii[id] ?? Self.defaultRadius, bounds.width / 2, bounds.height / 2)))
+            }
             let kind: Surfaces = shelf ? .dock : layer < 0 ? .widgets : .windows
             if collects.contains(kind), roomAbove && onScreen && !fills && !coverOnly && !fading && bounds.width >= 80 && bounds.height >= 40, id != 0,
                shelf || !isCard(id, bounds, into: &checked) {
